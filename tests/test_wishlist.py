@@ -6,9 +6,9 @@ import os
 import logging
 from unittest import TestCase
 from unittest.mock import patch
-from service.models import WishList, db, DataValidationError
+from service.models import WishList, Item, db, DataValidationError
 from wsgi import app
-from tests.factories import WishListFactory
+from tests.factories import WishListFactory, ItemFactory
 
 
 DATABASE_URI = os.getenv(
@@ -36,6 +36,7 @@ class TestWishListModel(TestCase):
     def setUp(self):
         """This runs before each test"""
         db.session.query(WishList).delete()  # clean up the last tests
+        db.session.query(Item).delete()  # clean up the last tests
         db.session.commit()
 
     def tearDown(self):
@@ -89,6 +90,7 @@ class TestWishListModel(TestCase):
         self.assertEqual(found_wishlist.name, wishlist.name)
         self.assertEqual(found_wishlist.customer_id, wishlist.customer_id)
         self.assertEqual(found_wishlist.note, wishlist.note)
+        self.assertEqual(found_wishlist.items, wishlist.items)
 
     def test_update_wishlist(self):
         """It should update a wishlist in the database"""
@@ -165,7 +167,9 @@ class TestWishListModel(TestCase):
     def test_serialize_wishlist(self):
         """It should serialize a Wishlist into a dictionary"""
         wishlist = WishListFactory()
-        wishlist.create()
+        item = ItemFactory()
+
+        wishlist.items.append(item)
 
         data = wishlist.serialize()
         self.assertIsInstance(data, dict)
@@ -173,6 +177,13 @@ class TestWishListModel(TestCase):
         self.assertEqual(data["name"], wishlist.name)
         self.assertEqual(data["customer_id"], wishlist.customer_id)
         self.assertEqual(data["note"], wishlist.note)
+        self.assertEqual(len(data["items"]), 1)
+
+        item_data = data["items"][0]
+        self.assertEqual(item_data["id"], item.id)
+        self.assertEqual(item_data["wishlist_id"], item.wishlist_id)
+        self.assertEqual(item_data["product_id"], item.product_id)
+        self.assertEqual(item_data["note"], item.note)
 
     def test_deserialize_wishlist(self):
         """It should deserialize a dictionary into a Wishlist"""

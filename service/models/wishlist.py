@@ -3,7 +3,7 @@ WishList Model
 """
 
 from .persistent_base import db, PersistentBase, DataValidationError
-
+from .item import Item
 
 class WishList(db.Model, PersistentBase):
     """
@@ -15,6 +15,7 @@ class WishList(db.Model, PersistentBase):
     name = db.Column(db.String(64), nullable=False)
     customer_id = db.Column(db.Integer, nullable=False)
     note = db.Column(db.String(256), nullable=True)  # optional note field
+    items = db.relationship("Item", backref="wishlist", lazy=True)
 
     @classmethod
     def find_by_name(cls, name: str):
@@ -23,12 +24,16 @@ class WishList(db.Model, PersistentBase):
 
     def serialize(self) -> dict:
         """Convert a WishList into a dictionary"""
-        return {
+        wishlist = { 
             "id": self.id,
             "name": self.name,
             "customer_id": self.customer_id,
             "note": self.note,
+            "items": [],
         }
+        for item in self.items:
+            wishlist["items"].append(item.serialize())
+        return wishlist
 
     def deserialize(self, data: dict) -> "WishList":
         """Convert a dictionary into a WishList"""
@@ -37,6 +42,12 @@ class WishList(db.Model, PersistentBase):
             self.name = data["name"]
             self.customer_id = data["customer_id"]
             self.note = data.get("note")  # optional field
+            # handle inner list of items
+            items = data.get("items")
+            for item in items:
+                new_item = Item()
+                new_item.deserialize(item)
+                self.items.append(new_item)
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
