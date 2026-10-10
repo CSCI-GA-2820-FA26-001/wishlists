@@ -99,3 +99,25 @@ class TestWishListModel(TestCase):
         # Fetch it back again and assert the name was updated
         updated_wishlist = WishList.find(wishlist.id)
         self.assertEqual(updated_wishlist.name, "Updated Wishlist Name")
+
+    def test_delete_wishlist(self):
+        """It should delete a wishlist from the database"""
+        wishlists = WishList.all()
+        self.assertEqual(wishlists, [])
+
+        # Create a wishlist and add it to the database
+        wishlist = WishListFactory()
+        wishlist.create()
+        self.assertIsNotNone(wishlist.id)
+
+        wishlists = WishList.all()
+        self.assertEqual(len(wishlists), 1)
+
+        # Delete the wishlist and assert that it was removed
+        wishlist = wishlists[0]
+        wishlist.delete()
+        wishlists = WishList.all()
+        self.assertEqual(len(wishlists), 0)
+
+
+
