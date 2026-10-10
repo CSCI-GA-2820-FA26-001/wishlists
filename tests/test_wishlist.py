@@ -5,6 +5,7 @@ Test cases for the WishList Model
 import os
 import logging
 from unittest import TestCase
+from unittest.mock import patch
 from service.models import WishList, db, DataValidationError
 from wsgi import app
 from tests.factories import WishListFactory
@@ -70,6 +71,13 @@ class TestWishListModel(TestCase):
         wishlists = WishList.all()
         self.assertEqual(len(wishlists), 1)
 
+    @patch("service.models.db.session.commit")
+    def test_add_wishlist_failed(self, exception_mock):
+        """It should not create an WishList on database error"""
+        exception_mock.side_effect = Exception()
+        wishlist = WishListFactory()
+        self.assertRaises(DataValidationError, wishlist.create)
+
     def test_read_wishlist(self):
         """It should read a wishlist from the database"""
         wishlist = WishListFactory()
@@ -100,6 +108,14 @@ class TestWishListModel(TestCase):
         updated_wishlist = WishList.find(wishlist.id)
         self.assertEqual(updated_wishlist.name, "Updated Wishlist Name")
 
+    @patch("service.models.db.session.commit")
+    def test_update_wishlist_failed(self, exception_mock):
+        """It should not update an WishList on database error"""
+        exception_mock.side_effect = Exception()
+        wishlist = WishListFactory()
+        self.assertRaises(DataValidationError, wishlist.update)
+
+
     def test_delete_wishlist(self):
         """It should delete a wishlist from the database"""
         wishlists = WishList.all()
@@ -118,6 +134,13 @@ class TestWishListModel(TestCase):
         wishlist.delete()
         wishlists = WishList.all()
         self.assertEqual(len(wishlists), 0)
+
+    @patch("service.models.db.session.commit")
+    def test_delete_wishlist_failed(self, exception_mock):
+        """It should not delete an WishList on database error"""
+        exception_mock.side_effect = Exception()
+        wishlist = WishListFactory()
+        self.assertRaises(DataValidationError, wishlist.delete)
 
     def test_list_all_wishlists(self):
         """It should List all WishLists in the database"""
