@@ -15,6 +15,8 @@ class WishListFactory(factory.Factory):
         model = WishList
 
     id = factory.Sequence(lambda n: n)
-    name = factory.Faker("first_name")
+    name = factory.Faker("name")
+    customer_id = factory.Faker("random_int", min=1001, max=9999)
+    note = factory.Faker("sentence", nb_words=6, variable_nb_words=True)
 
     # Todo: Add your other attributes here...
