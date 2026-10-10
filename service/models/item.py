@@ -8,7 +8,9 @@ class Item(db.Model, PersistentBase):
 
     # Table Schema
     id = db.Column(db.Integer, primary_key=True)
-    wishlist_id = db.Column(db.Integer, db.ForeignKey("wish_list.id"), nullable=False)
+    wishlist_id = db.Column(
+        db.Integer, db.ForeignKey("wish_list.id", ondelete="CASCADE"), nullable=False
+    )
     product_id = db.Column(db.Integer, nullable=False)
     note = db.Column(db.String(256), nullable=True)  # optional note field
 
