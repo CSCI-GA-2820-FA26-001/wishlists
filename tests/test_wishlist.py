@@ -7,6 +7,7 @@ import logging
 from unittest import TestCase
 from service.models import WishList, db
 from wsgi import app
+from tests.factories import WishListFactory
 
 
 DATABASE_URI = os.getenv(
@@ -40,5 +41,20 @@ class TestWishListModel(TestCase):
         """This runs after each test"""
         db.session.remove()
 
+    # TEST CASES FOR WishList MODEL
+    def test_create_wishlist(self):
+        """It should create a wishlist"""
+        fake_wishlist = WishListFactory()
 
+        wishlist = WishList(
+            id=fake_wishlist.id,
+            name=fake_wishlist.name,
+            customer_id=fake_wishlist.customer_id,
+            note=fake_wishlist.note
+        )
+        self.assertIsNotNone(wishlist)
+        self.assertEqual(wishlist.id, fake_wishlist.id)
+        self.assertEqual(wishlist.name, fake_wishlist.name)
+        self.assertEqual(wishlist.customer_id, fake_wishlist.customer_id)
+        self.assertEqual(wishlist.note, fake_wishlist.note)
     
