@@ -64,7 +64,18 @@ class TestWishListModel(TestCase):
 
         self.assertEqual(len(wishlist.items), 2)
 
+    def test_delete_wishlist_item(self):
+        "It should delete a item from wishlist"
+        self.test_add_wishlist_item()
 
-        
+        # Fetch it back and delete it
+        wishlist = WishList.all()[0]
+        self.assertEqual(len(wishlist.items), 1)
+
+        item_to_delete = wishlist.items[0]
+        item_to_delete.delete()  # Delete the item from the database
+        wishlist.update()
+
+        self.assertEqual(len(wishlist.items), 0)
 
     
