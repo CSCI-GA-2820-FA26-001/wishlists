@@ -24,7 +24,6 @@ class Item(db.Model, PersistentBase):
     def deserialize(self, data: dict) -> None:
         """Convert a dictionary into an Item"""
         try:
-            self.id = data["id"]
             self.wishlist_id = data["wishlist_id"]
             self.product_id = data["product_id"]
             self.note = data.get("note")  # optional field

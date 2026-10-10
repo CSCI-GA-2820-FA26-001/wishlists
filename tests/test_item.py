@@ -106,7 +106,6 @@ class TestWishListModel(TestCase):
 
         new_item = Item()
         new_item.deserialize(item.serialize())
-        self.assertEqual(new_item.id, item.id)
         self.assertEqual(new_item.wishlist_id, item.wishlist_id)
         self.assertEqual(new_item.product_id, item.product_id)
         self.assertEqual(new_item.note, item.note)

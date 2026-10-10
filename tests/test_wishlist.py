@@ -194,7 +194,6 @@ class TestWishListModel(TestCase):
         new_wishlist = WishList()
         new_wishlist.deserialize(data)
 
-        self.assertEqual(new_wishlist.id, wishlist.id)
         self.assertEqual(new_wishlist.name, wishlist.name)
         self.assertEqual(new_wishlist.customer_id, wishlist.customer_id)
         self.assertEqual(new_wishlist.note, wishlist.note)
@@ -212,7 +211,6 @@ class TestWishListModel(TestCase):
     def test_deserialize_with_item(self):
         """It should deserialize nested items"""
         data = {
-            "id": 5,
             "name": "Birthday",
             "customer_id": 10,
             "items": [

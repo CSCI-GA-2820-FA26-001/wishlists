@@ -43,7 +43,6 @@ class WishList(db.Model, PersistentBase):
     def deserialize(self, data: dict) -> "WishList":
         """Convert a dictionary into a WishList"""
         try:
-            self.id = data["id"]
             self.name = data["name"]
             self.customer_id = data["customer_id"]
             self.note = data.get("note")  # optional field
