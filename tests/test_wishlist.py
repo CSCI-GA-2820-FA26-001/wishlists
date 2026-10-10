@@ -70,7 +70,32 @@ class TestWishListModel(TestCase):
         wishlists = WishList.all()
         self.assertEqual(len(wishlists), 1)
 
+    def test_read_wishlist(self):
+        """It should read a wishlist from the database"""
+        wishlist = WishListFactory()
+        wishlist.create()
 
+        found_wishlist = WishList.find(wishlist.id)
+        self.assertIsNotNone(found_wishlist)
+        self.assertEqual(found_wishlist.id, wishlist.id)
+        self.assertEqual(found_wishlist.name, wishlist.name)
+        self.assertEqual(found_wishlist.customer_id, wishlist.customer_id)
+        self.assertEqual(found_wishlist.note, wishlist.note)
 
-    
-    
+    def test_update_wishlist(self):
+        """It should update a wishlist in the database"""
+        name = "21st Birthday Wishlist"
+     
+        wishlist = WishListFactory(name=name)
+        wishlist.create()
+
+        self.assertEqual(wishlist.name, name)
+
+        # Fetch it back and update it
+        wishlist = WishList.find(wishlist.id)
+        wishlist.name = "Updated Wishlist Name"
+        wishlist.update()   
+
+        # Fetch it back again and assert the name was updated
+        updated_wishlist = WishList.find(wishlist.id)
+        self.assertEqual(updated_wishlist.name, "Updated Wishlist Name")
