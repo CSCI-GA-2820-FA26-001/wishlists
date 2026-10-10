@@ -119,5 +119,26 @@ class TestWishListModel(TestCase):
         wishlists = WishList.all()
         self.assertEqual(len(wishlists), 0)
 
+    def test_list_all_wishlists(self):
+        """It should List all WishLists in the database"""
+        wishlists = WishList.all()
+        self.assertEqual(wishlists, [])
+        for wishlist in WishListFactory.create_batch(5):
+            wishlist.create()
+        # Assert that there are not 5 wishlists in the database
+        wishlists = WishList.all()
+        self.assertEqual(len(wishlists), 5)
+
+    def test_find_by_name(self):
+        """It should Find a Wishlist by name"""
+        wishlist = WishListFactory()
+        wishlist.create()
+
+        # Fetch it back by name
+        same_wishlist = WishList.find_by_name(wishlist.name)[0]
+        self.assertEqual(same_wishlist.id, wishlist.id)
+        self.assertEqual(same_wishlist.name, wishlist.name)
+
+
 
 
