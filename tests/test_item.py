@@ -78,6 +78,18 @@ class TestWishListModel(TestCase):
 
         self.assertEqual(len(wishlist.items), 0)
 
+    def test_delete_wishlist_deletes_items(self):
+        """It should delete all Items when their WishList is deleted"""
+        wishlist = WishListFactory()
+        wishlist.items.append(ItemFactory(wishlist=wishlist))
+        wishlist.items.append(ItemFactory(wishlist=wishlist))
+        wishlist.create()
+        self.assertEqual(len(Item.all()), 2)
+
+        wishlist.delete()
+        self.assertEqual(len(WishList.all()), 0)
+        self.assertEqual(len(Item.all()), 0)
+
     def test_serialize_an_item(self):
         "It should serialize an item"
         item = ItemFactory()

@@ -15,7 +15,12 @@ class WishList(db.Model, PersistentBase):
     name = db.Column(db.String(64), nullable=False)
     customer_id = db.Column(db.Integer, nullable=False)
     note = db.Column(db.String(256), nullable=True)  # optional note field
-    items = db.relationship("Item", backref="wishlist", lazy=True)
+    items = db.relationship(
+        "Item",
+        backref="wishlist",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
 
     @classmethod
     def find_by_name(cls, name: str):
