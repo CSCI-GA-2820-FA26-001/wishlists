@@ -2,10 +2,10 @@
 WishList Model
 """
 
-from .persistent_base import db
+from .persistent_base import db, PersistentBase
 
 
-class WishList(db.Model):
+class WishList(db.Model, PersistentBase):
     """
     Class that represents a WishList
     """
