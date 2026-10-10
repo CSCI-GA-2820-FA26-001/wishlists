@@ -5,6 +5,7 @@ WishList Model
 from .persistent_base import db, PersistentBase, DataValidationError
 from .item import Item
 
+
 class WishList(db.Model, PersistentBase):
     """
     Class that represents a WishList
@@ -29,7 +30,7 @@ class WishList(db.Model, PersistentBase):
 
     def serialize(self) -> dict:
         """Convert a WishList into a dictionary"""
-        wishlist = { 
+        wishlist = {
             "id": self.id,
             "name": self.name,
             "customer_id": self.customer_id,

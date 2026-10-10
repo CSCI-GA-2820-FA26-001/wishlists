@@ -1,3 +1,7 @@
+"""
+Item Model
+"""
+
 from .persistent_base import db, PersistentBase, DataValidationError
 
 

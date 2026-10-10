@@ -2,11 +2,13 @@
 Test Factory to make fake objects for testing
 """
 
+
 import factory
 from service.models import WishList, Item
 
+
 class WishListFactory(factory.Factory):
-    """Creates fake pets that you don't have to feed"""
+    """Creates fake WishLists for testing"""
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Maps factory to data model"""
@@ -28,7 +30,7 @@ class WishListFactory(factory.Factory):
             # A list of items were passed in, use them
             for item in extracted:
                 self.items.append(item)
-        
+
 
 class ItemFactory(factory.Factory):
     """Creates fake items for testing"""
