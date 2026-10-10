@@ -78,4 +78,14 @@ class TestWishListModel(TestCase):
 
         self.assertEqual(len(wishlist.items), 0)
 
+    def test_serialize_an_item(self):
+        "It should serialize an item"
+        item = ItemFactory()
+        serialize_item = item.serialize()
+        self.assertEqual(serialize_item["id"], item.id)
+        self.assertEqual(serialize_item["wishlist_id"], item.wishlist_id)
+        self.assertEqual(serialize_item["product_id"], item.product_id)
+        self.assertEqual(serialize_item["note"], item.note)
+
+
     
