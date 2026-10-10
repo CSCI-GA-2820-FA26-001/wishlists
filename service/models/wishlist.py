@@ -21,5 +21,12 @@ class WishList(db.Model, PersistentBase):
         """Returns all WishLists with the given name"""
         return cls.query.filter(cls.name == name).all()
 
-    
+    def serialize(self) -> dict:
+        """Convert a WishList into a dictionary"""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "customer_id": self.customer_id,
+            "note": self.note,
+        }
 

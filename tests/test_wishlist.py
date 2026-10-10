@@ -139,6 +139,18 @@ class TestWishListModel(TestCase):
         self.assertEqual(same_wishlist.id, wishlist.id)
         self.assertEqual(same_wishlist.name, wishlist.name)
 
+    def test_serialize_wishlist(self):
+        """It should serialize a Wishlist into a dictionary"""
+        wishlist = WishListFactory()
+        wishlist.create()
+
+        data = wishlist.serialize()
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data["id"], wishlist.id)
+        self.assertEqual(data["name"], wishlist.name)
+        self.assertEqual(data["customer_id"], wishlist.customer_id)
+        self.assertEqual(data["note"], wishlist.note)
+
 
 
 
