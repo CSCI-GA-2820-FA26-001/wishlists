@@ -5,7 +5,7 @@ Test cases for the WishList Model
 import os
 import logging
 from unittest import TestCase
-from service.models import WishList, db
+from service.models import WishList, db, DataValidationError
 from wsgi import app
 from tests.factories import WishListFactory
 
@@ -164,3 +164,13 @@ class TestWishListModel(TestCase):
         self.assertEqual(new_wishlist.name, wishlist.name)
         self.assertEqual(new_wishlist.customer_id, wishlist.customer_id)
         self.assertEqual(new_wishlist.note, wishlist.note)
+
+    def test_deserialize_with_key_error(self):
+        """It should not Deserialize an wishlist with a KeyError"""
+        wishlist = WishList()
+        self.assertRaises(DataValidationError, wishlist.deserialize, {})
+
+    def test_deserialize_with_type_error(self):
+        """It should not Deserialize an wishlist with a TypeError"""
+        wishlist = WishList()
+        self.assertRaises(DataValidationError, wishlist.deserialize, [])
