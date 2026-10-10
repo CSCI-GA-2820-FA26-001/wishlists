@@ -6,7 +6,7 @@ import os
 import logging
 from unittest import TestCase
 from unittest.mock import patch
-from service.models import WishList, Item, db, DataValidationError
+from service.models import WishList, Item, PersistentBase, db, DataValidationError
 from wsgi import app
 from tests.factories import WishListFactory, ItemFactory
 
@@ -35,8 +35,8 @@ class TestWishListModel(TestCase):
 
     def setUp(self):
         """This runs before each test"""
-        db.session.query(WishList).delete()  # clean up the last tests
         db.session.query(Item).delete()  # clean up the last tests
+        db.session.query(WishList).delete()  # clean up the last tests
         db.session.commit()
 
     def tearDown(self):
@@ -208,3 +208,49 @@ class TestWishListModel(TestCase):
         """It should not Deserialize an wishlist with a TypeError"""
         wishlist = WishList()
         self.assertRaises(DataValidationError, wishlist.deserialize, [])
+
+    def test_deserialize_with_item(self):
+        """It should deserialize nested items"""
+        data = {
+            "id": 5,
+            "name": "Birthday",
+            "customer_id": 10,
+            "items": [
+                {
+                    "id": 8,
+                    "wishlist_id": 5,
+                    "product_id": 12,
+                    "note": "Book",
+                }
+            ],
+        }
+        wishlist = WishList().deserialize(data)
+
+        self.assertEqual(len(wishlist.items), 1)
+        self.assertEqual(wishlist.items[0].product_id, 12)
+
+    def test_deserialize_without_items(self):
+        """It should accept older wishlist data without an items field"""
+        data = {"id": 5, "name": "Birthday", "customer_id": 10}
+
+        wishlist = WishList().deserialize(data)
+
+        self.assertEqual(wishlist.items, [])
+
+    def test_deserialize_with_attribute_error(self):
+        """It should translate attribute errors in input data"""
+
+        class InvalidData:
+            def __getitem__(self, key):
+                raise AttributeError(key)
+
+        with self.assertRaises(DataValidationError):
+            WishList().deserialize(InvalidData())
+
+    def test_persistent_base_initializes_id(self):
+        """It should initialize a persistent model without an ID"""
+        self.assertIsNone(PersistentBase().id)
+
+    def test_update_without_id(self):
+        """It should reject an update without an ID"""
+        self.assertRaises(DataValidationError, WishList().update)

@@ -43,7 +43,7 @@ class WishList(db.Model, PersistentBase):
             self.customer_id = data["customer_id"]
             self.note = data.get("note")  # optional field
             # handle inner list of items
-            items = data.get("items")
+            items = data.get("items", [])
             for item in items:
                 new_item = Item()
                 new_item.deserialize(item)
