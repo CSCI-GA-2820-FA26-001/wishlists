@@ -11,6 +11,13 @@ class WishList(db.Model, PersistentBase):
     Class that represents a WishList
     """
 
+    # A customer can't have two wishlists with the same name
+    __table_args__ = (
+        db.UniqueConstraint(
+            "customer_id", "name", name="uq_wish_list_customer_id_name"
+        ),
+    )
+
     # Table Schema
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)

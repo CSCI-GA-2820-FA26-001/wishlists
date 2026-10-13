@@ -27,6 +27,9 @@ class TestWishListModel(TestCase):
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
         app.app_context().push()
+        # Rebuild the tables so the schema (incl. unique constraints) matches the models
+        db.drop_all()
+        db.create_all()
 
     @classmethod
     def tearDownClass(cls):
@@ -163,6 +166,41 @@ class TestWishListModel(TestCase):
         same_wishlist = WishList.find_by_name(wishlist.name)[0]
         self.assertEqual(same_wishlist.id, wishlist.id)
         self.assertEqual(same_wishlist.name, wishlist.name)
+
+    def test_create_duplicate_wishlist_name_for_customer(self):
+        """It should not create two WishLists with the same name for one customer"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001)
+        wishlist.create()
+
+        duplicate = WishListFactory(name="Birthday", customer_id=1001)
+        self.assertRaises(DataValidationError, duplicate.create)
+        self.assertEqual(len(WishList.all()), 1)
+
+    def test_same_wishlist_name_for_different_customers(self):
+        """It should allow different customers to use the same WishList name"""
+        WishListFactory(name="Birthday", customer_id=1001).create()
+        WishListFactory(name="Birthday", customer_id=1002).create()
+        self.assertEqual(len(WishList.find_by_name("Birthday")), 2)
+
+    def test_different_wishlist_names_for_same_customer(self):
+        """It should allow one customer to have WishLists with different names"""
+        WishListFactory(name="Birthday", customer_id=1001).create()
+        WishListFactory(name="Holiday", customer_id=1001).create()
+        self.assertEqual(len(WishList.all()), 2)
+
+    def test_update_to_duplicate_wishlist_name(self):
+        """It should not rename a WishList to a name the customer already uses"""
+        WishListFactory(name="Birthday", customer_id=1001).create()
+        wishlist = WishListFactory(name="Holiday", customer_id=1001)
+        wishlist.create()
+        # Load the id now so update() doesn't trigger an autoflush outside its try block
+        wishlist_id = wishlist.id
+
+        wishlist.name = "Birthday"
+        self.assertRaises(DataValidationError, wishlist.update)
+
+        # The session was rolled back, so the original name is unchanged
+        self.assertEqual(WishList.find(wishlist_id).name, "Holiday")
 
     def test_serialize_wishlist(self):
         """It should serialize a Wishlist into a dictionary"""
