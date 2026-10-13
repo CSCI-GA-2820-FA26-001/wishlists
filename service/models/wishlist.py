@@ -3,7 +3,6 @@ WishList Model
 """
 
 from .persistent_base import db, PersistentBase, DataValidationError
-from .item import Item
 
 
 class WishList(db.Model, PersistentBase):
@@ -49,17 +48,15 @@ class WishList(db.Model, PersistentBase):
         return wishlist
 
     def deserialize(self, data: dict) -> "WishList":
-        """Convert a dictionary into a WishList"""
+        """
+        Convert a dictionary into a WishList
+
+        Items are ignored here; they are managed through the item endpoints
+        """
         try:
             self.name = data["name"]
             self.customer_id = data["customer_id"]
             self.note = data.get("note")  # optional field
-            # handle inner list of items
-            items = data.get("items", [])
-            for item in items:
-                new_item = Item()
-                new_item.deserialize(item)
-                self.items.append(new_item)
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:

@@ -247,8 +247,8 @@ class TestWishListModel(TestCase):
         wishlist = WishList()
         self.assertRaises(DataValidationError, wishlist.deserialize, [])
 
-    def test_deserialize_with_item(self):
-        """It should deserialize nested items"""
+    def test_deserialize_ignores_items(self):
+        """It should ignore nested items when deserializing a WishList"""
         data = {
             "name": "Birthday",
             "customer_id": 10,
@@ -264,9 +264,9 @@ class TestWishListModel(TestCase):
         }
         wishlist = WishList().deserialize(data)
 
-        self.assertEqual(len(wishlist.items), 1)
-        self.assertEqual(wishlist.items[0].product_id, 12)
-        self.assertEqual(wishlist.items[0].quantity, 2)
+        self.assertEqual(wishlist.name, "Birthday")
+        self.assertEqual(wishlist.customer_id, 10)
+        self.assertEqual(wishlist.items, [])
 
     def test_deserialize_without_items(self):
         """It should accept older wishlist data without an items field"""
