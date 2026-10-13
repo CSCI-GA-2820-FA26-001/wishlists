@@ -117,3 +117,15 @@ class TestYourResourceService(TestCase):
         response = self.client.post("/wishlists", json=second)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(WishList.all()), 2)
+
+    def test_create_wishlist_missing_required_data(self):
+        """It should reject a Wishlist with missing required data"""
+        invalid_payloads = [
+            {"customer_id": 1001},
+            {"name": "Birthday"},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post("/wishlists", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(WishList.all()), 0)
