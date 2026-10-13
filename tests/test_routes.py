@@ -101,3 +101,19 @@ class TestYourResourceService(TestCase):
         self.assertIsNotNone(data)
         self.assertIn("message", data)
         self.assertEqual(len(WishList.all()), 1)
+
+    def test_create_same_wishlist_name_different_customer(self):
+        """It should allow different customers to use the same Wishlist name"""
+        first = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        second = {
+            "name": "Birthday",
+            "customer_id": 1002,
+        }
+        response = self.client.post("/wishlists", json=first)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=second)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(WishList.all()), 2)
