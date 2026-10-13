@@ -86,3 +86,18 @@ class TestYourResourceService(TestCase):
         self.assertEqual(data["customer_id"], 1001)
         self.assertIsNotNone(data["id"])
         self.assertEqual(len(WishList.all()), 1)
+
+    def test_create_duplicate_wishlist(self):
+        """It should return Conflict when a customer reuses a Wishlist name"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+        self.assertEqual(len(WishList.all()), 1)
