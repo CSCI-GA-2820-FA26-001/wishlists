@@ -73,4 +73,16 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_create_wishlist(self):
+        """It should Create a new Wishlist"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        self.assertEqual(data["name"], "Birthday")
+        self.assertEqual(data["customer_id"], 1001)
+        self.assertIsNotNone(data["id"])
+        self.assertEqual(len(WishList.all()), 1)

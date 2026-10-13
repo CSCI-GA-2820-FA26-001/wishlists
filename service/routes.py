@@ -43,4 +43,10 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
+@app.route("/wishlists", methods=["POST"])
+def create_wishlist():
+    """Creates a Wishlist"""
+    wishlist = WishList()
+    wishlist.deserialize(request.get_json())
+    wishlist.create()
+    return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
