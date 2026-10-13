@@ -183,6 +183,7 @@ class TestWishListModel(TestCase):
         self.assertEqual(item_data["id"], item.id)
         self.assertEqual(item_data["wishlist_id"], item.wishlist_id)
         self.assertEqual(item_data["product_id"], item.product_id)
+        self.assertEqual(item_data["quantity"], item.quantity)
         self.assertEqual(item_data["note"], item.note)
 
     def test_deserialize_wishlist(self):
@@ -218,6 +219,7 @@ class TestWishListModel(TestCase):
                     "id": 8,
                     "wishlist_id": 5,
                     "product_id": 12,
+                    "quantity": 2,
                     "note": "Book",
                 }
             ],
@@ -226,6 +228,7 @@ class TestWishListModel(TestCase):
 
         self.assertEqual(len(wishlist.items), 1)
         self.assertEqual(wishlist.items[0].product_id, 12)
+        self.assertEqual(wishlist.items[0].quantity, 2)
 
     def test_deserialize_without_items(self):
         """It should accept older wishlist data without an items field"""

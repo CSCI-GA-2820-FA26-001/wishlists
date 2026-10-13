@@ -16,6 +16,7 @@ class Item(db.Model, PersistentBase):
         db.Integer, db.ForeignKey("wish_list.id", ondelete="CASCADE"), nullable=False
     )
     product_id = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
     note = db.Column(db.String(256), nullable=True)  # optional note field
 
     def serialize(self) -> dict:
@@ -24,6 +25,7 @@ class Item(db.Model, PersistentBase):
             "id": self.id,
             "wishlist_id": self.wishlist_id,
             "product_id": self.product_id,
+            "quantity": self.quantity,
             "note": self.note,
         }
 
@@ -32,6 +34,16 @@ class Item(db.Model, PersistentBase):
         try:
             self.wishlist_id = data["wishlist_id"]
             self.product_id = data["product_id"]
+            quantity = data["quantity"]
+            if isinstance(quantity, bool) or not isinstance(quantity, int):
+                raise DataValidationError(
+                    "Invalid type for integer [quantity]: " + str(type(quantity))
+                )
+            if quantity < 1:
+                raise DataValidationError(
+                    "Invalid value for [quantity]: must be at least 1"
+                )
+            self.quantity = quantity
             self.note = data.get("note")  # optional field
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error

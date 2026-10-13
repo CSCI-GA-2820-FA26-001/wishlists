@@ -43,5 +43,6 @@ class ItemFactory(factory.Factory):
     id = factory.Sequence(lambda n: n)
     wishlist_id = factory.Faker("random_int", min=1, max=100)
     product_id = factory.Faker("random_int", min=1001, max=9999)
+    quantity = factory.Faker("random_int", min=1, max=10)
     note = factory.Faker("sentence", nb_words=6, variable_nb_words=True)
     wishlist = factory.SubFactory(WishListFactory)

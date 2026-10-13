@@ -57,6 +57,7 @@ class TestItemModel(TestCase):
         new_wishlist = WishList.find(wishlist.id)
         self.assertEqual(len(new_wishlist.items), 1)
         self.assertEqual(new_wishlist.items[0].product_id, item.product_id)
+        self.assertEqual(new_wishlist.items[0].quantity, item.quantity)
         self.assertEqual(new_wishlist.items[0].note, item.note)
         self.assertEqual(new_wishlist.items[0].wishlist_id, wishlist.id)
 
@@ -82,6 +83,7 @@ class TestItemModel(TestCase):
         self.assertEqual(found_item.id, item.id)
         self.assertEqual(found_item.wishlist_id, wishlist.id)
         self.assertEqual(found_item.product_id, item.product_id)
+        self.assertEqual(found_item.quantity, item.quantity)
         self.assertEqual(found_item.note, item.note)
 
     def test_read_item_not_found(self):
@@ -158,6 +160,7 @@ class TestItemModel(TestCase):
         self.assertEqual(serialize_item["id"], item.id)
         self.assertEqual(serialize_item["wishlist_id"], item.wishlist_id)
         self.assertEqual(serialize_item["product_id"], item.product_id)
+        self.assertEqual(serialize_item["quantity"], item.quantity)
         self.assertEqual(serialize_item["note"], item.note)
 
     def test_deserialize_an_item(self):
@@ -169,14 +172,65 @@ class TestItemModel(TestCase):
         new_item.deserialize(item.serialize())
         self.assertEqual(new_item.wishlist_id, item.wishlist_id)
         self.assertEqual(new_item.product_id, item.product_id)
+        self.assertEqual(new_item.quantity, item.quantity)
         self.assertEqual(new_item.note, item.note)
 
     def test_deserialize_item_without_note(self):
         """It should deserialize an item when the optional note is missing"""
         item = Item()
-        item.deserialize({"wishlist_id": 1, "product_id": 1234})
+        item.deserialize({"wishlist_id": 1, "product_id": 1234, "quantity": 1})
         self.assertEqual(item.product_id, 1234)
+        self.assertEqual(item.quantity, 1)
         self.assertIsNone(item.note)
+
+    def test_deserialize_item_missing_quantity(self):
+        """It should not deserialize an item without a quantity"""
+        item = Item()
+        self.assertRaises(
+            DataValidationError,
+            item.deserialize,
+            {"wishlist_id": 1, "product_id": 1234},
+        )
+
+    def test_deserialize_item_with_quantity(self):
+        """It should deserialize an item with a quantity"""
+        item = Item()
+        item.deserialize({"wishlist_id": 1, "product_id": 1234, "quantity": 3})
+        self.assertEqual(item.quantity, 3)
+
+    def test_deserialize_item_bad_quantity_type(self):
+        """It should not deserialize an item with a non-integer quantity"""
+        for bad in ["3", 2.5, True, None]:
+            item = Item()
+            self.assertRaises(
+                DataValidationError,
+                item.deserialize,
+                {"wishlist_id": 1, "product_id": 1234, "quantity": bad},
+            )
+
+    def test_deserialize_item_bad_quantity_value(self):
+        """It should not deserialize an item with a quantity less than 1"""
+        for bad in [0, -1]:
+            item = Item()
+            self.assertRaises(
+                DataValidationError,
+                item.deserialize,
+                {"wishlist_id": 1, "product_id": 1234, "quantity": bad},
+            )
+
+    def test_update_item_quantity(self):
+        """It should Update the quantity of an item in a wishlist"""
+        wishlist = WishListFactory()
+        item = ItemFactory(wishlist=wishlist, quantity=1)
+        wishlist.items.append(item)
+        wishlist.create()
+
+        wishlist = WishList.find(wishlist.id)
+        wishlist.items[0].quantity = 5
+        wishlist.update()
+
+        wishlist = WishList.find(wishlist.id)
+        self.assertEqual(wishlist.items[0].quantity, 5)
 
     def test_deserialize_item_key_error(self):
         """It should not deserialize an item with missing fields"""
