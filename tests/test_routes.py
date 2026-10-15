@@ -73,4 +73,71 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_create_wishlist(self):
+        """It should Create a new Wishlist"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        self.assertEqual(data["name"], "Birthday")
+        self.assertEqual(data["customer_id"], 1001)
+        self.assertIsNotNone(data["id"])
+        self.assertEqual(len(WishList.all()), 1)
+
+    def test_create_duplicate_wishlist(self):
+        """It should return Conflict when a customer reuses a Wishlist name"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+        self.assertEqual(len(WishList.all()), 1)
+
+    def test_create_same_wishlist_name_different_customer(self):
+        """It should allow different customers to use the same Wishlist name"""
+        first = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        second = {
+            "name": "Birthday",
+            "customer_id": 1002,
+        }
+        response = self.client.post("/wishlists", json=first)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=second)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(WishList.all()), 2)
+
+    def test_create_wishlist_missing_required_data(self):
+        """It should reject a Wishlist with missing required data"""
+        invalid_payloads = [
+            {"customer_id": 1001},
+            {"name": "Birthday"},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post("/wishlists", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(WishList.all()), 0)
+
+    def test_create_wishlist_requires_json(self):
+        """It should reject a Wishlist request that is not JSON"""
+        response = self.client.post(
+            "/wishlists",
+            data="name=Birthday&customer_id=1001",
+            content_type="text/plain",
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
