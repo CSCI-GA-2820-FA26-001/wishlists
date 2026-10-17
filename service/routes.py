@@ -43,4 +43,16 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
+######################################################################
+# LIST ALL WISHLISTS
+######################################################################
+@app.route("/wishlists", methods=["GET"])
+def list_wishlists():
+    """Returns all of the WishLists"""
+    app.logger.info("Request for wishlist list")
+
+    wishlists = WishList.all()
+    results = [wishlist.serialize() for wishlist in wishlists]
+
+    app.logger.info("Returning %d wishlists", len(results))
+    return jsonify(results), status.HTTP_200_OK

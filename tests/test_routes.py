@@ -25,10 +25,12 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
+from tests.factories import WishListFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
+BASE_URL = "/wishlists"
 
 
 ######################################################################
@@ -73,4 +75,25 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    ######################################################################
+    #  L I S T   W I S H L I S T S
+    ######################################################################
+
+    def test_list_wishlists_empty(self):
+        """It should return an empty list when there are no WishLists"""
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get_json(), [])
+
+    def test_list_wishlists(self):
+        """It should List all WishLists"""
+        WishListFactory(name="Birthday").create()
+        WishListFactory(name="Holiday").create()
+
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data), 2)
+        names = [wishlist["name"] for wishlist in data]
+        self.assertIn("Birthday", names)
+        self.assertIn("Holiday", names)
