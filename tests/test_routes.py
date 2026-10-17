@@ -25,6 +25,8 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
+# Use the factory to prepare test data independently of the POST endpoint. BY_HYC
+from tests.factories import WishListFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -73,4 +75,66 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_delete_wishlist(self):
+        """It should delete an existing wishlist"""
+        # Save a wishlist through the model so the test does not require a POST route. BY_HYC
+        wishlist = WishListFactory()
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        # Send a DELETE request for the wishlist created by this test. BY_HYC
+        response = self.client.delete(f"/wishlists/{wishlist_id}")
+
+        # Verify the endpoint returns 204 No Content with an empty response body. BY_HYC
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # Verify the wishlist was removed from the database, not only acknowledged. BY_HYC
+        self.assertIsNone(WishList.find(wishlist_id))
+
+    def test_delete_wishlist_not_found(self):
+        """It should return empty 204 when the wishlist does not exist"""
+        # The setup clears all wishlists, so this ID is guaranteed to be absent. BY_HYC
+        self.assertIsNone(WishList.find(1))
+        response = self.client.delete("/wishlists/1")
+
+        # Story #11 requires the same empty 204 response for a missing wishlist. BY_HYC
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+    def test_delete_wishlist_with_items(self):
+        """It should delete associated items and preserve another wishlist"""
+        # Give each wishlist a distinct name to avoid the existing uniqueness constraint. BY_HYC
+        wishlist = WishListFactory(name="Delete target")
+        wishlist.create()
+        other_wishlist = WishListFactory(name="Keep target")
+        other_wishlist.create()
+
+        # Persist one item per wishlist to check both cascade deletion and isolation. BY_HYC
+        # Assign attributes explicitly so Pylint can check construction without ORM-generated keywords. BY_HYC
+        item = Item()
+        item.wishlist_id = wishlist.id
+        item.product_id = 1001
+        item.quantity = 1
+        item.create()
+        other_item = Item()
+        other_item.wishlist_id = other_wishlist.id
+        other_item.product_id = 1002
+        other_item.quantity = 1
+        other_item.create()
+        wishlist_id, item_id = wishlist.id, item.id
+        other_wishlist_id, other_item_id = other_wishlist.id, other_item.id
+
+        # Delete only the selected wishlist through the HTTP endpoint. BY_HYC
+        response = self.client.delete(f"/wishlists/{wishlist_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # Clear cached objects so these checks read the committed database state. BY_HYC
+        db.session.remove()
+        self.assertIsNone(WishList.find(wishlist_id))
+        self.assertIsNone(Item.find(item_id))
+
+        # Deleting one wishlist must leave the other wishlist and its item intact. BY_HYC
+        self.assertIsNotNone(WishList.find(other_wishlist_id))
+        self.assertIsNotNone(Item.find(other_item_id))

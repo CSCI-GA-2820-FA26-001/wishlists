@@ -43,4 +43,17 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
+# Delete a wishlist by its integer ID for story #11. BY_HYC
+@app.route("/wishlists/<int:wishlist_id>", methods=["DELETE"])
+def delete_wishlist(wishlist_id):
+    """Delete a wishlist and return 204 No Content"""
+    # Log the requested ID so deletion requests can be traced during debugging. BY_HYC
+    app.logger.info("Request to delete wishlist with id: %s", wishlist_id)
+
+    # Reuse the model's delete method, including its existing cascade behavior. BY_HYC
+    wishlist = WishList.find(wishlist_id)
+    if wishlist is not None:
+        wishlist.delete()
+
+    # Return an empty 204 response even when the wishlist does not exist, as required by #11. BY_HYC
+    return "", status.HTTP_204_NO_CONTENT
