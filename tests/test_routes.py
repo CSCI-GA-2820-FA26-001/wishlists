@@ -25,6 +25,8 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
+from tests.factories import WishListFactory, ItemFactory
+
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -73,4 +75,41 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_get_wishlist(self):
+        """It should Read a single Wishlist"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        response = self.client.get(f"/wishlists/{wishlist.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["id"], wishlist.id)
+        self.assertEqual(data["name"], wishlist.name)
+        self.assertEqual(data["customer_id"], wishlist.customer_id)
+        self.assertEqual(data["note"], wishlist.note)
+        self.assertEqual(data["items"], [])
+
+
+    def test_get_wishlist_with_items(self):
+        """It should Read a Wishlist along with its items"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
+        item.create()
+        response = self.client.get(f"/wishlists/{wishlist.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["id"], item.id)
+        self.assertEqual(data["items"][0]["product_id"], item.product_id)
+        self.assertEqual(data["items"][0]["wishlist_id"], wishlist.id)
+
+
+    def test_get_wishlist_not_found(self):
+        """It should return 404 Not Found when the Wishlist does not exist"""
+        response = self.client.get("/wishlists/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("was not found", data["message"])
