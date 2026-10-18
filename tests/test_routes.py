@@ -25,6 +25,7 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
+from tests.factories import WishListFactory, ItemFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -141,3 +142,56 @@ class TestYourResourceService(TestCase):
             response.status_code,
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         )
+
+    ######################################################################
+    #  I T E M   T E S T   C A S E S
+    ######################################################################
+
+    def test_list_wishlist_items(self):
+        """It should List all Items in a Wishlist"""
+        wishlist = WishListFactory()
+        for item in ItemFactory.create_batch(2, wishlist=wishlist):
+            wishlist.items.append(item)
+        wishlist.create()
+        product_ids = [item.product_id for item in wishlist.items]
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["wishlist_id"], wishlist.id)
+            self.assertIn(item["product_id"], product_ids)
+
+    def test_list_wishlist_items_only_from_that_wishlist(self):
+        """It should only List the Items that belong to the given Wishlist"""
+        wishlist = WishListFactory()
+        wishlist.items.append(ItemFactory(wishlist=wishlist))
+        wishlist.create()
+        other = WishListFactory()
+        other.items.append(ItemFactory(wishlist=other))
+        other.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["wishlist_id"], wishlist.id)
+
+    def test_list_wishlist_items_empty(self):
+        """It should return an empty list when a Wishlist has no Items"""
+        wishlist = WishListFactory()
+        wishlist.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.get_json(), [])
+
+    def test_list_wishlist_items_wishlist_not_found(self):
+        """It should return 404 Not Found when the Wishlist does not exist"""
+        response = self.client.get("/wishlists/0/items")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Wishlist with id '0' was not found", data["message"])
