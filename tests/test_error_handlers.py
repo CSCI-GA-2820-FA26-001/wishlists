@@ -2,9 +2,9 @@
 
 import unittest
 
+from wsgi import app
 from service.common import error_handlers, status
 from service.models import DataValidationError
-from wsgi import app
 
 
 class TestErrorHandlers(unittest.TestCase):
@@ -35,6 +35,11 @@ class TestErrorHandlers(unittest.TestCase):
                 error_handlers.method_not_supported,
                 status.HTTP_405_METHOD_NOT_ALLOWED,
                 "Method not Allowed",
+            ),
+            (
+                error_handlers.conflict,
+                status.HTTP_409_CONFLICT,
+                "Conflict",
             ),
             (
                 error_handlers.mediatype_not_supported,
