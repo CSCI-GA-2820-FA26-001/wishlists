@@ -229,7 +229,13 @@ class TestYourResourceService(TestCase):
     def test_add_item_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
         response = self.client.post("/wishlists/0/items", json={"product_id": 2001})
-        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("was not found", data["message"])
+        self.assertEqual(len(Item.all()), 0)
+
     def test_get_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
         response = self.client.get("/wishlists/0")
