@@ -54,6 +54,11 @@ def delete_wishlist(wishlist_id):
     wishlist = WishList.find(wishlist_id)
     if wishlist is not None:
         wishlist.delete()
+        # Log success only after the database deletion has completed. BY_HYC
+        app.logger.info("Wishlist %s deleted; returning 204 No Content", wishlist_id)
+    else:
+        # Record the missing-resource outcome, which also returns 204 under story #11. BY_HYC
+        app.logger.info("Wishlist %s not found; returning 204 No Content", wishlist_id)
 
     # Return an empty 204 response even when the wishlist does not exist, as required by #11. BY_HYC
     return "", status.HTTP_204_NO_CONTENT
