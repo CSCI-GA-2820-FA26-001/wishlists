@@ -74,6 +74,11 @@ def update_wishlist(wishlist_id):
     data = request.get_json()
     # Validate on a detached copy so a rejected request leaves the record untouched
     updated = WishList().deserialize(data)
+    if updated.customer_id != wishlist.customer_id:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            description="customer_id of a Wishlist cannot be changed",
+        )
     existing = WishList.query.filter(
         WishList.id != wishlist_id,
         WishList.customer_id == updated.customer_id,

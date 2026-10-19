@@ -54,9 +54,26 @@ class WishList(db.Model, PersistentBase):
         Items are ignored here; they are managed through the item endpoints
         """
         try:
-            self.name = data["name"]
-            self.customer_id = data["customer_id"]
-            self.note = data.get("note")  # optional field
+            name = data["name"]
+            if not isinstance(name, str):
+                raise DataValidationError(
+                    "Invalid type for string [name]: " + str(type(name))
+                )
+            if not name:
+                raise DataValidationError("Invalid value for [name]: must not be empty")
+            customer_id = data["customer_id"]
+            if isinstance(customer_id, bool) or not isinstance(customer_id, int):
+                raise DataValidationError(
+                    "Invalid type for integer [customer_id]: " + str(type(customer_id))
+                )
+            note = data.get("note")  # optional field
+            if note is not None and not isinstance(note, str):
+                raise DataValidationError(
+                    "Invalid type for string [note]: " + str(type(note))
+                )
+            self.name = name
+            self.customer_id = customer_id
+            self.note = note
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
