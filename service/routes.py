@@ -44,6 +44,22 @@ def index():
 ######################################################################
 
 
+@app.route("/wishlists", methods=["GET"])
+def list_wishlists():
+    """
+    List all Wishlists
+
+    This endpoint returns every Wishlist, with its items, as a JSON array.
+    An empty array is returned when there are no Wishlists.
+    """
+    app.logger.info("Request to list all Wishlists")
+
+    wishlists = WishList.all()
+    results = [wishlist.serialize() for wishlist in wishlists]
+
+    app.logger.info("Returning %d Wishlists", len(results))
+    return jsonify(results), status.HTTP_200_OK
+
 @app.route("/wishlists/<int:wishlist_id>/items", methods=["POST"])
 def create_wishlist_item(wishlist_id):
     """

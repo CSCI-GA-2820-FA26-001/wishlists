@@ -31,6 +31,7 @@ from tests.factories import WishListFactory, ItemFactory
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
+BASE_URL = "/wishlists"
 
 
 ######################################################################
@@ -266,6 +267,51 @@ class TestYourResourceService(TestCase):
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(len(Item.all()), 0)
 
+    def test_list_wishlists_empty(self):
+        """It should return an empty list when there are no WishLists"""
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.content_type, "application/json")
+        self.assertEqual(resp.get_json(), [])
+
+    def test_list_wishlists(self):
+        """It should List all WishLists"""
+        birthday = WishListFactory(name="Birthday")
+        birthday.create()
+        holiday = WishListFactory(name="Holiday")
+        holiday.create()
+
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.content_type, "application/json")
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+
+        # each wishlist is returned in full and matches what was saved
+        by_id = {wishlist["id"]: wishlist for wishlist in data}
+        for expected in (birthday, holiday):
+            self.assertIn(expected.id, by_id)
+            returned = by_id[expected.id]
+            self.assertEqual(returned["name"], expected.name)
+            self.assertEqual(returned["customer_id"], expected.customer_id)
+            self.assertEqual(returned["note"], expected.note)
+            self.assertEqual(returned["items"], [])
+
+    def test_list_wishlists_includes_items(self):
+        """It should include each WishList's items in the list"""
+        wishlist = WishListFactory(name="Birthday")
+        wishlist.create()
+        item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
+        item.create()
+
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(len(data[0]["items"]), 1)
+        self.assertEqual(data[0]["items"][0]["id"], item.id)
+        self.assertEqual(data[0]["items"][0]["product_id"], item.product_id)
     def test_add_item_requires_json(self):
         """It should return 415 when the request is not JSON"""
         wishlist = self._create_wishlist()
