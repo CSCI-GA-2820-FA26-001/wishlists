@@ -43,6 +43,24 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
+@app.route("/wishlists/<int:wishlist_id>", methods=["DELETE"])
+def delete_wishlist(wishlist_id):
+    """
+    Delete a Wishlist
+
+    This endpoint deletes a Wishlist and its items based on the id.
+    It returns 204 No Content whether or not the Wishlist existed.
+    """
+    app.logger.info("Request to delete Wishlist with id: %s", wishlist_id)
+
+    wishlist = WishList.find(wishlist_id)
+    if wishlist:
+        wishlist.delete()  # items are removed by the cascade on the relationship
+        app.logger.info("Wishlist with id %s deleted", wishlist_id)
+    else:
+        app.logger.info("Wishlist with id %s not found; nothing to delete", wishlist_id)
+
+    return "", status.HTTP_204_NO_CONTENT
 
 @app.route("/wishlists", methods=["GET"])
 def list_wishlists():

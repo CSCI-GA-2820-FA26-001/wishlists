@@ -75,6 +75,61 @@ class TestYourResourceService(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    ######################################################################
+    #  D E L E T E   A   W I S H L I S T
+    ######################################################################
+
+    def test_delete_wishlist(self):
+        """It should Delete an existing Wishlist"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        response = self.client.delete(f"/wishlists/{wishlist_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # the wishlist is actually gone from the database
+        self.assertIsNone(WishList.find(wishlist_id))
+
+    def test_delete_wishlist_not_found(self):
+        """It should return 204 No Content when the Wishlist does not exist"""
+        response = self.client.delete("/wishlists/0")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+    def test_delete_wishlist_with_items(self):
+        """It should Delete a Wishlist's items and leave other Wishlists alone"""
+        wishlist = WishListFactory(name="Delete target")
+        wishlist.create()
+        other_wishlist = WishListFactory(name="Keep target")
+        other_wishlist.create()
+
+        item = Item()
+        item.wishlist_id = wishlist.id
+        item.product_id = 1001
+        item.quantity = 1
+        item.create()
+        other_item = Item()
+        other_item.wishlist_id = other_wishlist.id
+        other_item.product_id = 1002
+        other_item.quantity = 1
+        other_item.create()
+        wishlist_id, item_id = wishlist.id, item.id
+        other_wishlist_id, other_item_id = other_wishlist.id, other_item.id
+
+        response = self.client.delete(f"/wishlists/{wishlist_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # read fresh from the database instead of the session cache
+        db.session.remove()
+        self.assertIsNone(WishList.find(wishlist_id))
+        self.assertIsNone(Item.find(item_id))
+        self.assertIsNotNone(WishList.find(other_wishlist_id))
+        self.assertIsNotNone(Item.find(other_item_id))
+
     def test_create_wishlist(self):
         """It should Create a new Wishlist"""
         payload = {
