@@ -43,24 +43,26 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Delete a wishlist by its integer ID for story #11. BY_HYC
+######################################################################
+# DELETE A WISHLIST
+######################################################################
 @app.route("/wishlists/<int:wishlist_id>", methods=["DELETE"])
 def delete_wishlist(wishlist_id):
-    """Delete a wishlist and return 204 No Content"""
-    # Log the requested ID so deletion requests can be traced during debugging. BY_HYC
-    app.logger.info("Request to delete wishlist with id: %s", wishlist_id)
+    """
+    Delete a Wishlist
 
-    # Reuse the model's delete method, including its existing cascade behavior. BY_HYC
+    This endpoint deletes a Wishlist and its items based on the id.
+    It returns 204 No Content whether or not the Wishlist existed.
+    """
+    app.logger.info("Request to delete Wishlist with id: %s", wishlist_id)
+
     wishlist = WishList.find(wishlist_id)
-    if wishlist is not None:
-        wishlist.delete()
-        # Log success only after the database deletion has completed. BY_HYC
-        app.logger.info("Wishlist %s deleted; returning 204 No Content", wishlist_id)
+    if wishlist:
+        wishlist.delete()  # items are removed by the cascade on the relationship
+        app.logger.info("Wishlist with id %s deleted", wishlist_id)
     else:
-        # Record the missing-resource outcome, which also returns 204 under story #11. BY_HYC
-        app.logger.info("Wishlist %s not found; returning 204 No Content", wishlist_id)
+        app.logger.info("Wishlist with id %s not found; nothing to delete", wishlist_id)
 
-    # Return an empty 204 response even when the wishlist does not exist, as required by #11. BY_HYC
     return "", status.HTTP_204_NO_CONTENT
 
 
