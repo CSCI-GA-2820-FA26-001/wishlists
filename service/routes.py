@@ -52,6 +52,35 @@ def create_wishlist_item(wishlist_id):
     This endpoint creates a new item in the Wishlist identified by wishlist_id
     """
     app.logger.info("Request to add an item to Wishlist with id: %s", wishlist_id)
+@app.route("/wishlists", methods=["POST"])
+def create_wishlist():
+    """Creates a Wishlist"""
+    wishlist = WishList()
+    wishlist.deserialize(request.get_json())
+    existing = WishList.query.filter_by(
+        customer_id=wishlist.customer_id,
+        name=wishlist.name,
+    ).first()
+    if existing:
+        abort(
+            status.HTTP_409_CONFLICT,
+            description="Wishlist already exists for this customer",
+        )
+    wishlist.create()
+    return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
+
+  
+  
+
+@app.route("/wishlists/<int:wishlist_id>", methods=["GET"])
+def get_wishlist(wishlist_id):
+    """
+    Retrieve a single Wishlist
+
+
+    This endpoint will return a Wishlist, including its items, based on its id
+    """
+    app.logger.info("Request to retrieve Wishlist with id: %s", wishlist_id)
 
     wishlist = WishList.find(wishlist_id)
     if not wishlist:
@@ -77,3 +106,7 @@ def create_wishlist_item(wishlist_id):
 
     app.logger.info("Item with id %s added to Wishlist %s", item.id, wishlist_id)
     return jsonify(item.serialize()), status.HTTP_201_CREATED
+
+    app.logger.info("Returning Wishlist: %s", wishlist.name)
+    return jsonify(wishlist.serialize()), status.HTTP_200_OK
+  

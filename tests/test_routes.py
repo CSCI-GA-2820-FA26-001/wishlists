@@ -25,7 +25,8 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
-from tests.factories import WishListFactory
+from tests.factories import WishListFactory, ItemFactory
+
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -73,8 +74,104 @@ class TestYourResourceService(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+    def test_create_wishlist(self):
+        """It should Create a new Wishlist"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        self.assertEqual(data["name"], "Birthday")
+        self.assertEqual(data["customer_id"], 1001)
+        self.assertIsNotNone(data["id"])
+        self.assertEqual(len(WishList.all()), 1)
 
-    # Todo: Add your test cases here...
+    def test_create_duplicate_wishlist(self):
+        """It should return Conflict when a customer reuses a Wishlist name"""
+        payload = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+        self.assertEqual(len(WishList.all()), 1)
+
+    def test_create_same_wishlist_name_different_customer(self):
+        """It should allow different customers to use the same Wishlist name"""
+        first = {
+            "name": "Birthday",
+            "customer_id": 1001,
+        }
+        second = {
+            "name": "Birthday",
+            "customer_id": 1002,
+        }
+        response = self.client.post("/wishlists", json=first)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post("/wishlists", json=second)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(WishList.all()), 2)
+
+    def test_create_wishlist_missing_required_data(self):
+        """It should reject a Wishlist with missing required data"""
+        invalid_payloads = [
+            {"customer_id": 1001},
+            {"name": "Birthday"},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post("/wishlists", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(WishList.all()), 0)
+
+    def test_create_wishlist_requires_json(self):
+        """It should reject a Wishlist request that is not JSON"""
+        response = self.client.post(
+            "/wishlists",
+            data="name=Birthday&customer_id=1001",
+            content_type="text/plain",
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+        
+    def test_get_wishlist(self):
+        """It should Read a single Wishlist"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        response = self.client.get(f"/wishlists/{wishlist.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["id"], wishlist.id)
+        self.assertEqual(data["name"], wishlist.name)
+        self.assertEqual(data["customer_id"], wishlist.customer_id)
+        self.assertEqual(data["note"], wishlist.note)
+        self.assertEqual(data["items"], [])
+
+    def test_get_wishlist_with_items(self):
+        """It should Read a Wishlist along with its items"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
+        item.create()
+        response = self.client.get(f"/wishlists/{wishlist.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["id"], item.id)
+        self.assertEqual(data["items"][0]["product_id"], item.product_id)
+        self.assertEqual(data["items"][0]["wishlist_id"], wishlist.id)
+
     def _create_wishlist(self):
         """Helper: save a Wishlist to the database and return it"""
         wishlist = WishListFactory()
@@ -132,6 +229,10 @@ class TestYourResourceService(TestCase):
     def test_add_item_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
         response = self.client.post("/wishlists/0/items", json={"product_id": 2001})
+        
+    def test_get_wishlist_not_found(self):
+        """It should return 404 Not Found when the Wishlist does not exist"""
+        response = self.client.get("/wishlists/0")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
