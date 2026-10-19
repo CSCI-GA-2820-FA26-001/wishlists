@@ -25,6 +25,7 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Item, WishList
+from tests.factories import WishListFactory, ItemFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -141,3 +142,111 @@ class TestYourResourceService(TestCase):
             response.status_code,
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         )
+
+    def test_update_wishlist(self):
+        """It should Update an existing Wishlist"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001, note="old")
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        payload = {"name": "Holiday", "customer_id": 1001, "note": "new"}
+        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["id"], wishlist_id)
+        self.assertEqual(data["name"], "Holiday")
+        self.assertEqual(data["customer_id"], 1001)
+        self.assertEqual(data["note"], "new")
+        self.assertEqual(
+            WishList.query.filter_by(id=wishlist_id, name="Holiday").count(), 1
+        )
+
+    def test_update_wishlist_not_found(self):
+        """It should return Not Found when updating a missing Wishlist"""
+        payload = {"name": "Holiday", "customer_id": 1001}
+        response = self.client.put("/wishlists/0", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+
+    def test_update_wishlist_missing_required_data(self):
+        """It should reject a Wishlist update with missing required data"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001)
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        invalid_payloads = [
+            {"customer_id": 1001},
+            {"name": "Holiday"},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                data = response.get_json()
+                self.assertIsNotNone(data)
+                self.assertIn("message", data)
+        self.assertEqual(
+            WishList.query.filter_by(id=wishlist_id, name="Birthday").count(), 1
+        )
+
+    def test_update_wishlist_requires_json(self):
+        """It should reject a Wishlist update that is not JSON"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001)
+        wishlist.create()
+        response = self.client.put(
+            f"/wishlists/{wishlist.id}",
+            data="name=Holiday&customer_id=1001",
+            content_type="text/plain",
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+    def test_update_wishlist_to_duplicate_name(self):
+        """It should return Conflict when renaming to a name the customer already uses"""
+        WishListFactory(name="Birthday", customer_id=1001).create()
+        wishlist = WishListFactory(name="Holiday", customer_id=1001)
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        payload = {"name": "Birthday", "customer_id": 1001}
+        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+        self.assertEqual(
+            WishList.query.filter_by(id=wishlist_id, name="Holiday").count(), 1
+        )
+
+    def test_update_wishlist_same_name(self):
+        """It should allow a Wishlist to be saved with its current name"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001, note="old")
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        payload = {"name": "Birthday", "customer_id": 1001, "note": "new"}
+        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["name"], "Birthday")
+        self.assertEqual(data["note"], "new")
+
+    def test_update_wishlist_does_not_duplicate_items(self):
+        """It should not duplicate existing Items when the update includes items"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001)
+        ItemFactory(wishlist=wishlist)
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        payload = wishlist.serialize()
+        payload["name"] = "Holiday"
+        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["name"], "Holiday")
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(len(Item.all()), 1)
