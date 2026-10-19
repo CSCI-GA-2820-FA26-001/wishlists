@@ -31,6 +31,17 @@ DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
 
+# Payloads with every required field present but one field of the wrong type
+INVALID_TYPE_PAYLOADS = [
+    {"name": 123, "customer_id": 1001},
+    {"name": [], "customer_id": 1001},
+    {"name": "", "customer_id": 1001},
+    {"name": "Holiday", "customer_id": "1001"},
+    {"name": "Holiday", "customer_id": 1.5},
+    {"name": "Holiday", "customer_id": True},
+    {"name": "Holiday", "customer_id": 1001, "note": 123},
+]
+
 
 ######################################################################
 #  T E S T   C A S E S
@@ -131,6 +142,17 @@ class TestYourResourceService(TestCase):
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(len(WishList.all()), 0)
 
+    def test_create_wishlist_bad_data_types(self):
+        """It should reject a Wishlist with fields of the wrong type"""
+        for payload in INVALID_TYPE_PAYLOADS:
+            with self.subTest(payload=payload):
+                response = self.client.post("/wishlists", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                data = response.get_json()
+                self.assertIsNotNone(data)
+                self.assertIn("message", data)
+        self.assertEqual(len(WishList.all()), 0)
+
     def test_create_wishlist_requires_json(self):
         """It should reject a Wishlist request that is not JSON"""
         response = self.client.post(
@@ -189,6 +211,45 @@ class TestYourResourceService(TestCase):
                 self.assertIn("message", data)
         self.assertEqual(
             WishList.query.filter_by(id=wishlist_id, name="Birthday").count(), 1
+        )
+
+    def test_update_wishlist_bad_data_types(self):
+        """It should reject a Wishlist update with fields of the wrong type"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001, note="old")
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        for payload in INVALID_TYPE_PAYLOADS:
+            with self.subTest(payload=payload):
+                response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                data = response.get_json()
+                self.assertIsNotNone(data)
+                self.assertIn("message", data)
+        self.assertEqual(
+            WishList.query.filter_by(
+                id=wishlist_id, name="Birthday", customer_id=1001, note="old"
+            ).count(),
+            1,
+        )
+
+    def test_update_wishlist_customer_id_change(self):
+        """It should not allow a Wishlist update to change the customer_id"""
+        wishlist = WishListFactory(name="Birthday", customer_id=1001, note="old")
+        wishlist.create()
+        wishlist_id = wishlist.id
+
+        payload = {"name": "Holiday", "customer_id": 1002, "note": "new"}
+        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("message", data)
+        self.assertEqual(
+            WishList.query.filter_by(
+                id=wishlist_id, name="Birthday", customer_id=1001, note="old"
+            ).count(),
+            1,
         )
 
     def test_update_wishlist_requires_json(self):
