@@ -54,7 +54,6 @@ def get_wishlist(wishlist_id):
     """
     app.logger.info("Request to retrieve Wishlist with id: %s", wishlist_id)
 
-
     wishlist = WishList.find(wishlist_id)
     if not wishlist:
         abort(
@@ -65,4 +64,3 @@ def get_wishlist(wishlist_id):
 
     app.logger.info("Returning Wishlist: %s", wishlist.name)
     return jsonify(wishlist.serialize()), status.HTTP_200_OK
-

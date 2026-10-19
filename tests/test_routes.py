@@ -89,7 +89,6 @@ class TestYourResourceService(TestCase):
         self.assertEqual(data["note"], wishlist.note)
         self.assertEqual(data["items"], [])
 
-
     def test_get_wishlist_with_items(self):
         """It should Read a Wishlist along with its items"""
         wishlist = WishListFactory()
@@ -103,7 +102,6 @@ class TestYourResourceService(TestCase):
         self.assertEqual(data["items"][0]["id"], item.id)
         self.assertEqual(data["items"][0]["product_id"], item.product_id)
         self.assertEqual(data["items"][0]["wishlist_id"], wishlist.id)
-
 
     def test_get_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
