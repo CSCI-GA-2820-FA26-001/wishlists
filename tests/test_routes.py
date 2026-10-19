@@ -141,3 +141,119 @@ class TestYourResourceService(TestCase):
             response.status_code,
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         )
+
+    def test_delete_wishlist_item(self):
+        """It should delete one item while preserving its wishlist and another item"""
+        # Prepare persisted records directly so this test does not depend on POST endpoints. BY_HYC
+        wishlist = WishList()
+        wishlist.name = "Delete item test"
+        wishlist.customer_id = 1001
+        wishlist.create()
+        item = Item()
+        item.wishlist_id = wishlist.id
+        item.product_id = 1001
+        item.quantity = 1
+        item.create()
+
+        # Keep a second item in the same wishlist to detect deletion beyond the requested item. BY_HYC
+        other_item = Item()
+        other_item.wishlist_id = wishlist.id
+        other_item.product_id = 1002
+        other_item.quantity = 2
+        other_item.create()
+        wishlist_id, item_id = wishlist.id, item.id
+        other_item_id = other_item.id
+        other_original = other_item.serialize()
+
+        # Address the Item record ID in the URL, rather than its product_id. BY_HYC
+        response = self.client.delete(f"/wishlists/{wishlist_id}/items/{item_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # Read fresh database state to prove only the requested item was deleted. BY_HYC
+        db.session.remove()
+        self.assertIsNone(Item.find(item_id))
+        saved_wishlist = WishList.find(wishlist_id)
+        self.assertIsNotNone(saved_wishlist)
+        self.assertEqual(saved_wishlist.name, "Delete item test")
+        self.assertEqual(saved_wishlist.customer_id, 1001)
+        saved_item = Item.find(other_item_id)
+        self.assertIsNotNone(saved_item)
+        self.assertEqual(saved_item.serialize(), other_original)
+
+    def _create_item_for_deletion(self, name="Item deletion test"):
+        """Prepare persisted records for the story #3 tests. BY_HYC"""
+        # Set attributes explicitly and avoid depending on POST endpoints. BY_HYC
+        wishlist = WishList()
+        wishlist.name = name
+        wishlist.customer_id = 1001
+        wishlist.create()
+        item = Item()
+        item.wishlist_id = wishlist.id
+        item.product_id = 1001
+        item.quantity = 1
+        item.note = "Preserve unless targeted"
+        item.create()
+        return wishlist.id, item.id
+
+    def test_delete_wishlist_item_not_found(self):
+        """It should return empty 204 for a missing item or wishlist"""
+        # Setup clears the tables; only the records created here exist. BY_HYC
+        wishlist_id, item_id = self._create_item_for_deletion()
+        original = Item.find(item_id).serialize()
+        paths = [
+            f"/wishlists/{wishlist_id}/items/{item_id + 1}",
+            f"/wishlists/{wishlist_id + 1}/items/{item_id}",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                # Treat an absent parent as no item at this URL, returning an empty 204. BY_HYC
+                response = self.client.delete(path)
+                self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+                self.assertEqual(response.data, b"")
+
+                # A request for missing resources must preserve the existing records. BY_HYC
+                db.session.remove()
+                saved_item = Item.find(item_id)
+                self.assertIsNotNone(saved_item)
+                self.assertEqual(saved_item.serialize(), original)
+                self.assertIsNotNone(WishList.find(wishlist_id))
+
+    def test_delete_wishlist_item_twice(self):
+        """It should return empty 204 on repeated deletion and retain the wishlist"""
+        # Repeat the same request to verify the missing-item behavior after a real deletion. BY_HYC
+        wishlist_id, item_id = self._create_item_for_deletion()
+        for attempt in range(2):
+            with self.subTest(attempt=attempt):
+                response = self.client.delete(f"/wishlists/{wishlist_id}/items/{item_id}")
+                self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+                self.assertEqual(response.data, b"")
+
+                # The item stays absent while its parent survives both requests. BY_HYC
+                db.session.remove()
+                self.assertIsNone(Item.find(item_id))
+                self.assertIsNotNone(WishList.find(wishlist_id))
+
+    def test_delete_wishlist_item_wrong_wishlist(self):
+        """It should preserve an item when the URL specifies a different wishlist"""
+        # Both wishlists contain the same product but have distinct Item record IDs. BY_HYC
+        wishlist_id, item_id = self._create_item_for_deletion("First wishlist")
+        other_wishlist_id, other_item_id = self._create_item_for_deletion("Second wishlist")
+        original = Item.find(item_id).serialize()
+        other_original = Item.find(other_item_id).serialize()
+
+        # Combine one parent's ID with the other parent's item ID; neither item should be deleted. BY_HYC
+        response = self.client.delete(f"/wishlists/{wishlist_id}/items/{other_item_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, b"")
+
+        # Check persisted records to verify isolation between wishlists. BY_HYC
+        db.session.remove()
+        saved_item = Item.find(item_id)
+        saved_other_item = Item.find(other_item_id)
+        self.assertIsNotNone(saved_item)
+        self.assertIsNotNone(saved_other_item)
+        self.assertEqual(saved_item.serialize(), original)
+        self.assertEqual(saved_other_item.serialize(), other_original)
+        self.assertIsNotNone(WishList.find(wishlist_id))
+        self.assertIsNotNone(WishList.find(other_wishlist_id))
