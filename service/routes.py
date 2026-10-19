@@ -102,5 +102,8 @@ def update_wishlist_item(wishlist_id, item_id):
     item.note = candidate.note
     item.update()
 
+    # Log success only after the database update has completed. BY_HYC
+    app.logger.info("Item %s in wishlist %s updated; returning 200 OK", item_id, wishlist_id)
+
     # Return the updated item itself, rather than the entire wishlist, as required by #15. BY_HYC
     return jsonify(item.serialize()), status.HTTP_200_OK
