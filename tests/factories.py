@@ -21,7 +21,7 @@ class WishListFactory(factory.Factory):
     note = factory.Faker("sentence", nb_words=6, variable_nb_words=True)
 
     @factory.post_generation
-    def items(self, create, extracted, **kwargs):
+    def items(self, create, extracted, **_kwargs):
         """Create a list of items for the wishlist"""
         if not create:
             return
