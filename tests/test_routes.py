@@ -82,9 +82,24 @@ class TestYourResourceService(TestCase):
     ######################################################################
 
     def test_index(self):
-        """It should call the home page"""
+        """It should return service information and a usable wishlist list URL"""
+        # Keep the existing status check and verify the JSON response required by story #8.
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.is_json)
+        data = resp.get_json()
+        self.assertIsInstance(data, dict)
+
+        # Define the service metadata contract using the initial service version.
+        self.assertEqual(data.get("name"), "Wishlist Service")
+        self.assertEqual(data.get("version"), "1.0.0")
+        self.assertEqual(data.get("wishlists_url"), BASE_URL)
+
+        # Follow the advertised link to confirm it reaches the existing list endpoint.
+        listing = self.client.get(data["wishlists_url"])
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertTrue(listing.is_json)
+        self.assertIsInstance(listing.get_json(), list)
 
     ######################################################################
     #  D E L E T E   A   W I S H L I S T
@@ -546,6 +561,75 @@ class TestYourResourceService(TestCase):
         self.assertEqual(
             response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         )
+
+    ######################################################################
+    #  I T E M   T E S T   C A S E S
+    ######################################################################
+
+    def test_list_wishlist_items(self):
+        """It should List all Items in a Wishlist"""
+        wishlist = WishListFactory()
+        for item in ItemFactory.create_batch(2, wishlist=wishlist):
+            wishlist.items.append(item)
+        wishlist.create()
+        expected_ids = sorted(item.id for item in wishlist.items)
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual([item["id"] for item in data], expected_ids)
+        for item in data:
+            self.assertEqual(item["wishlist_id"], wishlist.id)
+
+    def test_list_wishlist_items_ordered_by_id(self):
+        """It should List Items in id order even after one is updated"""
+        wishlist = WishListFactory()
+        for item in ItemFactory.create_batch(3, wishlist=wishlist):
+            wishlist.items.append(item)
+        wishlist.create()
+        expected_ids = sorted(item.id for item in wishlist.items)
+
+        # Updating a row can change the order Postgres returns rows in
+        first_item = Item.find(expected_ids[0])
+        first_item.note = "updated note"
+        first_item.update()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.get_json()], expected_ids)
+
+    def test_list_wishlist_items_only_from_that_wishlist(self):
+        """It should only List the Items that belong to the given Wishlist"""
+        wishlist = WishListFactory()
+        wishlist.items.append(ItemFactory(wishlist=wishlist))
+        wishlist.create()
+        other = WishListFactory()
+        other.items.append(ItemFactory(wishlist=other))
+        other.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["wishlist_id"], wishlist.id)
+
+    def test_list_wishlist_items_empty(self):
+        """It should return an empty list when a Wishlist has no Items"""
+        wishlist = WishListFactory()
+        wishlist.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.get_json(), [])
+
+    def test_list_wishlist_items_wishlist_not_found(self):
+        """It should return 404 Not Found when the Wishlist does not exist"""
+        response = self.client.get("/wishlists/0/items")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Wishlist with id '0' was not found", data["message"])
 
     def test_get_wishlist_item(self):
         """It should Read a product in a Wishlist"""

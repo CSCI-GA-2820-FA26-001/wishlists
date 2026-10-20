@@ -32,11 +32,20 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
-    return (
-        "Reminder: return some useful information in json format about the service here",
-        status.HTTP_200_OK,
+    """Return service information and the wishlist list URL as JSON"""
+    # Record requests for the service entry point required by story #8.
+    app.logger.info("Request for Wishlist service information")
+
+    # Use the initial service version and generate the resource URL from its existing endpoint.
+    response = jsonify(
+        name="Wishlist Service",
+        version="1.0.0",
+        wishlists_url=url_for("list_wishlists"),
     )
+
+    # Log the successful response after constructing the service information.
+    app.logger.info("Returning Wishlist service information; 200 OK")
+    return response, status.HTTP_200_OK
 
 
 ######################################################################
@@ -212,3 +221,26 @@ def get_wishlist(wishlist_id):
 
     app.logger.info("Returning Wishlist: %s", wishlist.name)
     return jsonify(wishlist.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+#  I T E M   E N D P O I N T S
+######################################################################
+
+
+@app.route("/wishlists/<int:wishlist_id>/items", methods=["GET"])
+def list_wishlist_items(wishlist_id):
+    """Returns all of the Items in a Wishlist"""
+    app.logger.info("Request for Items in Wishlist with id: %s", wishlist_id)
+
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found.",
+        )
+
+    items = sorted(wishlist.items, key=lambda item: item.id)
+    results = [item.serialize() for item in items]
+    app.logger.info("Returning %d items", len(results))
+    return jsonify(results), status.HTTP_200_OK
