@@ -102,7 +102,7 @@ Content-Type: application/json
 }
 ```
 
-Send the full wishlist (`name` and `customer_id` are required). Items are not changed. Returns `200 OK` with the updated wishlist.
+This replaces the whole wishlist, so send every field you want to keep (`name` and `customer_id` are required). Fields you leave out, such as `note`, are cleared. Items are not changed. Returns `200 OK` with the updated wishlist.
 
 Errors: `400` for missing or invalid fields, or if `customer_id` is different from the wishlist's current owner (the owner can't be changed), `404` if the wishlist doesn't exist, `409` if the customer already has another wishlist with that name, `415` if the body isn't JSON.
 
@@ -191,7 +191,7 @@ The dev container includes Python 3.12, all dependencies, and a PostgreSQL datab
 make run
 ```
 
-The service listens on port `8080`. Try it out:
+`make run` runs `honcho start`, which starts the service with gunicorn using the `Procfile`. The service listens on port `8080`. Try it out:
 
 ```bash
 curl -i http://localhost:8080/wishlists
@@ -210,8 +210,12 @@ make lint   # run flake8 and pylint
 Run a single test file with:
 
 ```bash
-pytest tests/test_routes.py -v
+pytest tests/test_routes.py -v --no-cov
 ```
+
+`--no-cov` turns off the coverage check. Without it, the run fails because one test file alone doesn't reach the 95% coverage that `setup.cfg` requires, even when every test passes.
+
+> **Note:** The tests use the same database as `make run`, and they clear the tables before each test. Any wishlists you created with `curl` will be deleted when you run the tests.
 
 The tests use the PostgreSQL database in the dev container. If you see `failed to resolve host 'postgres'`, the database container has stopped. Start it again from your computer's terminal:
 
