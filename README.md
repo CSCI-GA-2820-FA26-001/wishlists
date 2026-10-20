@@ -53,6 +53,8 @@ Deleting a wishlist also deletes all of its items.
 | `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
 | `GET`    | `/wishlists/<id>/items`         | List the products in a wishlist | `200 OK`        |
 | `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
+| `PUT`    | `/wishlists/<id>/items/<item_id>` | Update a product in a wishlist | `200 OK`       |
+| `DELETE` | `/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist | `204 No Content` |
 
 ### Create a wishlist
 
@@ -78,6 +80,8 @@ Response `201 Created`:
   "items": []
 }
 ```
+
+The response also includes a `Location` header with the new wishlist's URL, for example `Location: http://localhost:8080/wishlists/1`.
 
 Errors: `400` if `name` or `customer_id` is missing or the wrong type, `409` if the customer already has a wishlist with that name, `415` if the body isn't JSON.
 
@@ -146,6 +150,39 @@ Errors: `400` if `product_id` is missing or not an integer, or `quantity` is not
 ### Read a product in a wishlist
 
 `GET /wishlists/<id>/items/<item_id>` returns a single item as JSON. Returns `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist.
+
+### Update a product in a wishlist
+
+```http
+PUT /wishlists/1/items/1
+Content-Type: application/json
+
+{
+  "product_id": 2001,
+  "quantity": 3,
+  "note": "Size L"
+}
+```
+
+Response `200 OK`:
+
+```json
+{
+  "id": 1,
+  "wishlist_id": 1,
+  "product_id": 2001,
+  "quantity": 3,
+  "note": "Size L"
+}
+```
+
+This replaces the item's fields, so send every field you want to keep (`product_id` and `quantity` are required). If you leave out `note`, it is cleared. The item's `id` and its wishlist don't change, and any `wishlist_id` in the body is ignored.
+
+Errors: `400` if `product_id` is missing or not an integer, `quantity` is missing or not an integer of at least 1, or `note` is not a string of at most 256 characters, `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist, `415` if the body isn't JSON.
+
+### Delete a product from a wishlist
+
+`DELETE /wishlists/<id>/items/<item_id>` removes the item from the wishlist. The wishlist itself is kept. It returns `204 No Content` with an empty body, even if the item didn't exist, so deleting twice is safe. An item that belongs to a different wishlist is never deleted.
 
 ### Root URL
 
