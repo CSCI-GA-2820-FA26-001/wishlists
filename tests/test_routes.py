@@ -82,9 +82,24 @@ class TestYourResourceService(TestCase):
     ######################################################################
 
     def test_index(self):
-        """It should call the home page"""
+        """It should return service information and a usable wishlist list URL"""
+        # Keep the existing status check and verify the JSON response required by story #8.
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.is_json)
+        data = resp.get_json()
+        self.assertIsInstance(data, dict)
+
+        # Define the service metadata contract using the initial service version.
+        self.assertEqual(data.get("name"), "Wishlist Service")
+        self.assertEqual(data.get("version"), "1.0.0")
+        self.assertEqual(data.get("wishlists_url"), BASE_URL)
+
+        # Follow the advertised link to confirm it reaches the existing list endpoint.
+        listing = self.client.get(data["wishlists_url"])
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertTrue(listing.is_json)
+        self.assertIsInstance(listing.get_json(), list)
 
     ######################################################################
     #  D E L E T E   A   W I S H L I S T
@@ -153,6 +168,15 @@ class TestYourResourceService(TestCase):
         self.assertEqual(data["customer_id"], 1001)
         self.assertIsNotNone(data["id"])
         self.assertEqual(len(WishList.all()), 1)
+
+        # Check that the Location header points to the new Wishlist
+        location = response.headers.get("Location", None)
+        self.assertIsNotNone(location)
+        response = self.client.get(location)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_wishlist = response.get_json()
+        self.assertEqual(new_wishlist["id"], data["id"])
+        self.assertEqual(new_wishlist["name"], data["name"])
 
     def test_create_duplicate_wishlist(self):
         """It should return Conflict when a customer reuses a Wishlist name"""
@@ -768,3 +792,53 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertEqual(data["error"], "Not Found")
         self.assertIn("Wishlist with id '0' was not found", data["message"])
+
+    def test_get_wishlist_item(self):
+        """It should Read a product in a Wishlist"""
+        wishlist = self._create_wishlist()
+        item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
+        item.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items/{item.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["id"], item.id)
+        self.assertEqual(data["wishlist_id"], wishlist.id)
+        self.assertEqual(data["product_id"], item.product_id)
+        self.assertEqual(data["quantity"], item.quantity)
+        self.assertEqual(data["note"], item.note)
+
+    def test_get_wishlist_item_wishlist_not_found(self):
+        """It should return 404 Not Found when the Wishlist does not exist"""
+        response = self.client.get("/wishlists/0/items/1")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Wishlist", data["message"])
+        self.assertIn("was not found", data["message"])
+
+    def test_get_wishlist_item_not_found(self):
+        """It should return 404 Not Found when the Item does not exist"""
+        wishlist = self._create_wishlist()
+        response = self.client.get(f"/wishlists/{wishlist.id}/items/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Item", data["message"])
+        self.assertIn("was not found", data["message"])
+
+    def test_get_wishlist_item_in_other_wishlist(self):
+        """It should return 404 Not Found when the Item belongs to another Wishlist"""
+        wishlist = self._create_wishlist()
+        other_wishlist = self._create_wishlist()
+        item = ItemFactory(wishlist=other_wishlist, wishlist_id=other_wishlist.id)
+        item.create()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items/{item.id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Item", data["message"])
