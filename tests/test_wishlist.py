@@ -16,6 +16,7 @@ DATABASE_URI = os.getenv(
 )
 
 
+# pylint: disable=too-many-public-methods
 class TestWishListModel(TestCase):
     """Wishlist Model Test Cases"""
 
@@ -98,7 +99,7 @@ class TestWishListModel(TestCase):
     def test_update_wishlist(self):
         """It should update a wishlist in the database"""
         name = "21st Birthday Wishlist"
-     
+
         wishlist = WishListFactory(name=name)
         wishlist.create()
 
@@ -107,7 +108,7 @@ class TestWishListModel(TestCase):
         # Fetch it back and update it
         wishlist = WishList.find(wishlist.id)
         wishlist.name = "Updated Wishlist Name"
-        wishlist.update()   
+        wishlist.update()
 
         # Fetch it back again and assert the name was updated
         updated_wishlist = WishList.find(wishlist.id)
@@ -119,7 +120,6 @@ class TestWishListModel(TestCase):
         exception_mock.side_effect = Exception()
         wishlist = WishListFactory()
         self.assertRaises(DataValidationError, wishlist.update)
-
 
     def test_delete_wishlist(self):
         """It should delete a wishlist from the database"""
@@ -247,6 +247,42 @@ class TestWishListModel(TestCase):
         wishlist = WishList()
         self.assertRaises(DataValidationError, wishlist.deserialize, [])
 
+    def test_deserialize_bad_name_type(self):
+        """It should not Deserialize a wishlist whose name is not a non-empty string"""
+        for bad in [123, [], {}, True, None, ""]:
+            with self.subTest(name=bad):
+                self.assertRaises(
+                    DataValidationError,
+                    WishList().deserialize,
+                    {"name": bad, "customer_id": 1001},
+                )
+
+    def test_deserialize_bad_customer_id_type(self):
+        """It should not Deserialize a wishlist whose customer_id is not an integer"""
+        for bad in ["1001", 1.5, True, None, []]:
+            with self.subTest(customer_id=bad):
+                self.assertRaises(
+                    DataValidationError,
+                    WishList().deserialize,
+                    {"name": "Birthday", "customer_id": bad},
+                )
+
+    def test_deserialize_bad_note_type(self):
+        """It should not Deserialize a wishlist whose note is not a string or None"""
+        for bad in [123, [], {}, True]:
+            with self.subTest(note=bad):
+                self.assertRaises(
+                    DataValidationError,
+                    WishList().deserialize,
+                    {"name": "Birthday", "customer_id": 1001, "note": bad},
+                )
+
+    def test_deserialize_with_null_note(self):
+        """It should Deserialize a wishlist whose note is None"""
+        data = {"name": "Birthday", "customer_id": 1001, "note": None}
+        wishlist = WishList().deserialize(data)
+        self.assertIsNone(wishlist.note)
+
     def test_deserialize_ignores_items(self):
         """It should ignore nested items when deserializing a WishList"""
         data = {
@@ -279,7 +315,9 @@ class TestWishListModel(TestCase):
     def test_deserialize_with_attribute_error(self):
         """It should translate attribute errors in input data"""
 
-        class InvalidData:
+        class InvalidData:  # pylint: disable=too-few-public-methods
+            """Mapping whose lookups raise AttributeError"""
+
             def __getitem__(self, key):
                 raise AttributeError(key)
 
