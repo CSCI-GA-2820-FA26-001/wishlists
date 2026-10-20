@@ -32,11 +32,20 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
-    return (
-        "Reminder: return some useful information in json format about the service here",
-        status.HTTP_200_OK,
+    """Return service information and the wishlist list URL as JSON"""
+    # Record requests for the service entry point required by story #8.
+    app.logger.info("Request for Wishlist service information")
+
+    # Use the initial service version and generate the resource URL from its existing endpoint.
+    response = jsonify(
+        name="Wishlist Service",
+        version="1.0.0",
+        wishlists_url=url_for("list_wishlists"),
     )
+
+    # Log the successful response after constructing the service information.
+    app.logger.info("Returning Wishlist service information; 200 OK")
+    return response, status.HTTP_200_OK
 
 
 ######################################################################
@@ -111,9 +120,41 @@ def create_wishlist_item(wishlist_id):
     return jsonify(item.serialize()), status.HTTP_201_CREATED
 
 
+@app.route("/wishlists/<int:wishlist_id>/items/<int:item_id>", methods=["GET"])
+def get_wishlist_item(wishlist_id, item_id):
+    """
+    Retrieve a product in a Wishlist
+
+    This endpoint returns the item identified by item_id in the Wishlist identified by wishlist_id
+    """
+    app.logger.info(
+        "Request to retrieve Item with id: %s from Wishlist with id: %s",
+        item_id,
+        wishlist_id,
+    )
+
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found.",
+        )
+
+    item = Item.find(item_id)
+    if not item or item.wishlist_id != wishlist_id:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Item with id '{item_id}' was not found in Wishlist '{wishlist_id}'.",
+        )
+
+    app.logger.info("Returning Item with id %s from Wishlist %s", item_id, wishlist_id)
+    return jsonify(item.serialize()), status.HTTP_200_OK
+
+
 @app.route("/wishlists", methods=["POST"])
 def create_wishlist():
     """Creates a Wishlist"""
+    app.logger.info("Request to create a Wishlist")
     wishlist = WishList()
     wishlist.deserialize(request.get_json())
     existing = WishList.query.filter_by(
@@ -126,7 +167,65 @@ def create_wishlist():
             description="Wishlist already exists for this customer",
         )
     wishlist.create()
-    return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
+    app.logger.info("Wishlist with id %s created", wishlist.id)
+    location_url = url_for("get_wishlist", wishlist_id=wishlist.id, _external=True)
+    return (
+        jsonify(wishlist.serialize()),
+        status.HTTP_201_CREATED,
+        {"Location": location_url},
+    )
+
+
+# Update one item identified within its wishlist, matching the story #14 URL structure.
+@app.route("/wishlists/<int:wishlist_id>/items/<int:item_id>", methods=["PUT"])
+def update_wishlist_item(wishlist_id, item_id):
+    """Update an existing wishlist item and return its JSON"""
+    # Log both IDs to identify the requested resource during debugging.
+    app.logger.info("Request to update item %s in wishlist %s", item_id, wishlist_id)
+
+    # Require the parent to exist and prevent updates to an item from another wishlist.
+    if WishList.find(wishlist_id) is None:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found",
+        )
+    item = Item.find(item_id)
+    if item is None or item.wishlist_id != wishlist_id:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Item with id '{item_id}' was not found in Wishlist '{wishlist_id}'",
+        )
+
+    # Require a JSON object before passing its fields to the existing model validation.
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise DataValidationError("Item data must be a JSON object")
+
+    # Reject implicit database conversions; a product ID must be a JSON integer, not a boolean.
+    product_id = data.get("product_id")
+    if isinstance(product_id, bool) or not isinstance(product_id, int):
+        raise DataValidationError("product_id is required and must be an integer")
+
+    # Match the existing nullable String(256) column before changing the persisted item.
+    note = data.get("note")
+    if note is not None and (not isinstance(note, str) or len(note) > 256):
+        raise DataValidationError("note must be null or a string of at most 256 characters")
+
+    # Validate on an unsaved object so rejected input does not partially alter the stored item.
+    candidate = Item()
+    candidate.deserialize({**data, "wishlist_id": wishlist_id})
+
+    # Copy only editable fields, preserving the item's ID and its wishlist association.
+    item.product_id = candidate.product_id
+    item.quantity = candidate.quantity
+    item.note = candidate.note
+    item.update()
+
+    # Log success only after the database update has completed.
+    app.logger.info("Item %s in wishlist %s updated; returning 200 OK", item_id, wishlist_id)
+
+    # Return the updated item itself, rather than the entire wishlist, as required by #15.
+    return jsonify(item.serialize()), status.HTTP_200_OK
 
 
 # Delete one Item record within its wishlist, preserving the parent wishlist.
