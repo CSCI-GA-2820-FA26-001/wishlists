@@ -78,6 +78,8 @@ def list_wishlist_items(wishlist_id):
             description=f"Wishlist with id '{wishlist_id}' was not found.",
         )
 
-    results = [item.serialize() for item in wishlist.items]
+    # Sort by id so the order is stable (the database doesn't guarantee one)
+    items = sorted(wishlist.items, key=lambda item: item.id)
+    results = [item.serialize() for item in items]
     app.logger.info("Returning %d items", len(results))
     return jsonify(results), status.HTTP_200_OK

@@ -153,15 +153,31 @@ class TestYourResourceService(TestCase):
         for item in ItemFactory.create_batch(2, wishlist=wishlist):
             wishlist.items.append(item)
         wishlist.create()
-        product_ids = [item.product_id for item in wishlist.items]
+        expected_ids = sorted(item.id for item in wishlist.items)
 
         response = self.client.get(f"/wishlists/{wishlist.id}/items")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
-        self.assertEqual(len(data), 2)
+        self.assertEqual([item["id"] for item in data], expected_ids)
         for item in data:
             self.assertEqual(item["wishlist_id"], wishlist.id)
-            self.assertIn(item["product_id"], product_ids)
+
+    def test_list_wishlist_items_ordered_by_id(self):
+        """It should List Items in id order even after one is updated"""
+        wishlist = WishListFactory()
+        for item in ItemFactory.create_batch(3, wishlist=wishlist):
+            wishlist.items.append(item)
+        wishlist.create()
+        expected_ids = sorted(item.id for item in wishlist.items)
+
+        # Updating a row can change the order Postgres returns rows in
+        first_item = Item.find(expected_ids[0])
+        first_item.note = "updated note"
+        first_item.update()
+
+        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.get_json()], expected_ids)
 
     def test_list_wishlist_items_only_from_that_wishlist(self):
         """It should only List the Items that belong to the given Wishlist"""
