@@ -176,6 +176,58 @@ def create_wishlist():
     )
 
 
+# Update one item identified within its wishlist, matching the story #14 URL structure.
+@app.route("/wishlists/<int:wishlist_id>/items/<int:item_id>", methods=["PUT"])
+def update_wishlist_item(wishlist_id, item_id):
+    """Update an existing wishlist item and return its JSON"""
+    # Log both IDs to identify the requested resource during debugging.
+    app.logger.info("Request to update item %s in wishlist %s", item_id, wishlist_id)
+
+    # Require the parent to exist and prevent updates to an item from another wishlist.
+    if WishList.find(wishlist_id) is None:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found",
+        )
+    item = Item.find(item_id)
+    if item is None or item.wishlist_id != wishlist_id:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Item with id '{item_id}' was not found in Wishlist '{wishlist_id}'",
+        )
+
+    # Require a JSON object before passing its fields to the existing model validation.
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise DataValidationError("Item data must be a JSON object")
+
+    # Reject implicit database conversions; a product ID must be a JSON integer, not a boolean.
+    product_id = data.get("product_id")
+    if isinstance(product_id, bool) or not isinstance(product_id, int):
+        raise DataValidationError("product_id is required and must be an integer")
+
+    # Match the existing nullable String(256) column before changing the persisted item.
+    note = data.get("note")
+    if note is not None and (not isinstance(note, str) or len(note) > 256):
+        raise DataValidationError("note must be null or a string of at most 256 characters")
+
+    # Validate on an unsaved object so rejected input does not partially alter the stored item.
+    candidate = Item()
+    candidate.deserialize({**data, "wishlist_id": wishlist_id})
+
+    # Copy only editable fields, preserving the item's ID and its wishlist association.
+    item.product_id = candidate.product_id
+    item.quantity = candidate.quantity
+    item.note = candidate.note
+    item.update()
+
+    # Log success only after the database update has completed.
+    app.logger.info("Item %s in wishlist %s updated; returning 200 OK", item_id, wishlist_id)
+
+    # Return the updated item itself, rather than the entire wishlist, as required by #15.
+    return jsonify(item.serialize()), status.HTTP_200_OK
+
+
 @app.route("/wishlists/<int:wishlist_id>", methods=["PUT"])
 def update_wishlist(wishlist_id):
     """Updates a Wishlist"""
