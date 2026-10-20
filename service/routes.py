@@ -71,6 +71,7 @@ def delete_wishlist(wishlist_id):
 
     return "", status.HTTP_204_NO_CONTENT
 
+
 @app.route("/wishlists", methods=["GET"])
 def list_wishlists():
     """
@@ -86,6 +87,7 @@ def list_wishlists():
 
     app.logger.info("Returning %d Wishlists", len(results))
     return jsonify(results), status.HTTP_200_OK
+
 
 @app.route("/wishlists/<int:wishlist_id>/items", methods=["POST"])
 def create_wishlist_item(wishlist_id):
