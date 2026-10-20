@@ -137,8 +137,40 @@ def create_wishlist():
     wishlist.create()
     return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
 
-  
-  
+
+@app.route("/wishlists/<int:wishlist_id>", methods=["PUT"])
+def update_wishlist(wishlist_id):
+    """Updates a Wishlist"""
+    app.logger.info("Request to update Wishlist with id %s", wishlist_id)
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found",
+        )
+    data = request.get_json()
+    # Validate on a detached copy so a rejected request leaves the record untouched
+    updated = WishList().deserialize(data)
+    if updated.customer_id != wishlist.customer_id:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            description="customer_id of a Wishlist cannot be changed",
+        )
+    existing = WishList.query.filter(
+        WishList.id != wishlist_id,
+        WishList.customer_id == updated.customer_id,
+        WishList.name == updated.name,
+    ).first()
+    if existing:
+        abort(
+            status.HTTP_409_CONFLICT,
+            description="Wishlist already exists for this customer",
+        )
+    wishlist.deserialize(data)
+    wishlist.update()
+    app.logger.info("Wishlist with id %s updated", wishlist_id)
+    return jsonify(wishlist.serialize()), status.HTTP_200_OK
+
 
 @app.route("/wishlists/<int:wishlist_id>", methods=["GET"])
 def get_wishlist(wishlist_id):
@@ -158,3 +190,26 @@ def get_wishlist(wishlist_id):
 
     app.logger.info("Returning Wishlist: %s", wishlist.name)
     return jsonify(wishlist.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+#  I T E M   E N D P O I N T S
+######################################################################
+
+
+@app.route("/wishlists/<int:wishlist_id>/items", methods=["GET"])
+def list_wishlist_items(wishlist_id):
+    """Returns all of the Items in a Wishlist"""
+    app.logger.info("Request for Items in Wishlist with id: %s", wishlist_id)
+
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found.",
+        )
+
+    items = sorted(wishlist.items, key=lambda item: item.id)
+    results = [item.serialize() for item in items]
+    app.logger.info("Returning %d items", len(results))
+    return jsonify(results), status.HTTP_200_OK
