@@ -129,24 +129,24 @@ def create_wishlist():
     return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
 
 
-# Delete one Item record within its wishlist, preserving the parent wishlist. BY_HYC
+# Delete one Item record within its wishlist, preserving the parent wishlist.
 @app.route("/wishlists/<int:wishlist_id>/items/<int:item_id>", methods=["DELETE"])
 def delete_wishlist_item(wishlist_id, item_id):
     """Delete an item from a wishlist and return an empty 204 response"""
-    # Record the requested parent and item IDs for debugging. BY_HYC
+    # Record the requested parent and item IDs for debugging.
     app.logger.info("Request to delete item %s from wishlist %s", item_id, wishlist_id)
 
-    # Match both IDs so an item belonging to another wishlist cannot be deleted. BY_HYC
+    # Match both IDs so an item belonging to another wishlist cannot be deleted.
     item = Item.query.filter_by(id=item_id, wishlist_id=wishlist_id).first()
     if item is not None:
         item.delete()
-        # Log success only after the existing model method commits the deletion. BY_HYC
+        # Log success only after the existing model method commits the deletion.
         app.logger.info("Item %s deleted from wishlist %s; returning 204 No Content", item_id, wishlist_id)
     else:
-        # An absent item under this URL requires no deletion, including an absent parent. BY_HYC
+        # An absent item under this URL requires no deletion, including an absent parent.
         app.logger.info("Item %s not found in wishlist %s; returning 204 No Content", item_id, wishlist_id)
 
-    # Story #3 returns no response body whether or not the item was present. BY_HYC
+    # Story #3 returns no response body whether or not the item was present.
     return "", status.HTTP_204_NO_CONTENT
 
 
