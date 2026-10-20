@@ -154,6 +154,7 @@ def get_wishlist_item(wishlist_id, item_id):
 @app.route("/wishlists", methods=["POST"])
 def create_wishlist():
     """Creates a Wishlist"""
+    app.logger.info("Request to create a Wishlist")
     wishlist = WishList()
     wishlist.deserialize(request.get_json())
     existing = WishList.query.filter_by(
@@ -166,7 +167,13 @@ def create_wishlist():
             description="Wishlist already exists for this customer",
         )
     wishlist.create()
-    return jsonify(wishlist.serialize()), status.HTTP_201_CREATED
+    app.logger.info("Wishlist with id %s created", wishlist.id)
+    location_url = url_for("get_wishlist", wishlist_id=wishlist.id, _external=True)
+    return (
+        jsonify(wishlist.serialize()),
+        status.HTTP_201_CREATED,
+        {"Location": location_url},
+    )
 
 
 @app.route("/wishlists/<int:wishlist_id>", methods=["PUT"])

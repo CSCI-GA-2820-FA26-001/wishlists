@@ -169,6 +169,15 @@ class TestYourResourceService(TestCase):
         self.assertIsNotNone(data["id"])
         self.assertEqual(len(WishList.all()), 1)
 
+        # Check that the Location header points to the new Wishlist
+        location = response.headers.get("Location", None)
+        self.assertIsNotNone(location)
+        response = self.client.get(location)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_wishlist = response.get_json()
+        self.assertEqual(new_wishlist["id"], data["id"])
+        self.assertEqual(new_wishlist["name"], data["name"])
+
     def test_create_duplicate_wishlist(self):
         """It should return Conflict when a customer reuses a Wishlist name"""
         payload = {
