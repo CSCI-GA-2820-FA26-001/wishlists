@@ -82,9 +82,24 @@ class TestYourResourceService(TestCase):
     ######################################################################
 
     def test_index(self):
-        """It should call the home page"""
+        """It should return service information and a usable wishlist list URL"""
+        # Keep the existing status check and verify the JSON response required by story #8.
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.is_json)
+        data = resp.get_json()
+        self.assertIsInstance(data, dict)
+
+        # Define the service metadata contract using the initial service version.
+        self.assertEqual(data.get("name"), "Wishlist Service")
+        self.assertEqual(data.get("version"), "1.0.0")
+        self.assertEqual(data.get("wishlists_url"), BASE_URL)
+
+        # Follow the advertised link to confirm it reaches the existing list endpoint.
+        listing = self.client.get(data["wishlists_url"])
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertTrue(listing.is_json)
+        self.assertIsInstance(listing.get_json(), list)
 
     ######################################################################
     #  D E L E T E   A   W I S H L I S T
