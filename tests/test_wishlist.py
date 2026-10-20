@@ -10,6 +10,8 @@ from service.models import WishList, Item, PersistentBase, db, DataValidationErr
 from wsgi import app
 from tests.factories import WishListFactory, ItemFactory
 
+# pylint: disable=duplicate-code
+
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
