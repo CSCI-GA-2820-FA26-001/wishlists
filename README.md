@@ -44,7 +44,7 @@ Deleting a wishlist also deletes all of its items.
 
 | Method   | URL                             | Description                    | Success          |
 | -------- | ------------------------------- | ------------------------------ | ---------------- |
-| `GET`    | `/`                             | Root URL                       | `200 OK`         |
+| `GET`    | `/`                             | Service information            | `200 OK`         |
 | `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
 | `GET`    | `/wishlists`                    | List all wishlists             | `200 OK`         |
 | `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
@@ -52,6 +52,7 @@ Deleting a wishlist also deletes all of its items.
 | `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
 | `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
 | `GET`    | `/wishlists/<id>/items`         | List the products in a wishlist | `200 OK`        |
+| `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
 
 ### Create a wishlist
 
@@ -141,6 +142,22 @@ Errors: `400` if `product_id` is missing or not an integer, or `quantity` is not
 ### List the products in a wishlist
 
 `GET /wishlists/<id>/items` returns a JSON array of the wishlist's items, sorted by item `id`. It returns `[]` when the wishlist has no items, and `404` if the wishlist doesn't exist.
+
+### Read a product in a wishlist
+
+`GET /wishlists/<id>/items/<item_id>` returns a single item as JSON. Returns `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist.
+
+### Root URL
+
+`GET /` returns information about the service:
+
+```json
+{
+  "name": "Wishlist Service",
+  "version": "1.0.0",
+  "wishlists_url": "/wishlists"
+}
+```
 
 ### Errors
 
