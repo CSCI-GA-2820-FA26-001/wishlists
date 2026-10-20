@@ -222,7 +222,7 @@ class TestYourResourceService(TestCase):
 
     def test_update_wishlist_item(self):
         """It should update one item and return its JSON while preserving the wishlist"""
-        # Create records through the models so this test does not depend on POST endpoints. BY_HYC
+        # Create records through the models so this test does not depend on POST endpoints.
         wishlist = WishList()
         wishlist.name = "Update item test"
         wishlist.customer_id = 1001
@@ -235,19 +235,19 @@ class TestYourResourceService(TestCase):
         item.create()
         wishlist_id, item_id = wishlist.id, item.id
 
-        # Supply editable fields; the URL identifies the existing item and its parent. BY_HYC
+        # Supply editable fields; the URL identifies the existing item and its parent.
         payload = {"product_id": 1002, "quantity": 2, "note": "Updated note"}
         response = self.client.put(
             f"/wishlists/{wishlist_id}/items/{item_id}", json=payload
         )
 
-        # Return the updated item itself, including its unchanged identity and parent. BY_HYC
+        # Return the updated item itself, including its unchanged identity and parent.
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.is_json)
         expected = {"id": item_id, "wishlist_id": wishlist_id, **payload}
         self.assertEqual(response.get_json(), expected)
 
-        # Read fresh database state to verify persistence and preservation of the wishlist. BY_HYC
+        # Read fresh database state to verify persistence and preservation of the wishlist.
         db.session.remove()
         saved_item = Item.find(item_id)
         self.assertIsNotNone(saved_item)
@@ -258,8 +258,8 @@ class TestYourResourceService(TestCase):
         self.assertEqual(saved_wishlist.customer_id, 1001)
 
     def _create_item_for_update(self, name="Item update validation"):
-        """Prepare persisted records for the story #15 tests. BY_HYC"""
-        # Use explicit attributes to avoid ORM constructor inference issues in Pylint. BY_HYC
+        """Prepare persisted records for the story #15 tests."""
+        # Use explicit attributes to avoid ORM constructor inference issues in Pylint.
         wishlist = WishList()
         wishlist.name = name
         wishlist.customer_id = 1001
@@ -274,45 +274,57 @@ class TestYourResourceService(TestCase):
 
     def test_update_wishlist_item_not_found(self):
         """It should return JSON 404 for a missing wishlist or item"""
-        # Only one parent and item exist, so the next IDs are absent. BY_HYC
+        # Only one parent and item exist, so the next IDs are absent.
         wishlist_id, item_id = self._create_item_for_update()
         original = Item.find(item_id).serialize()
-        paths = [
-            f"/wishlists/{wishlist_id + 1}/items/{item_id}",
-            f"/wishlists/{wishlist_id}/items/{item_id + 1}",
+        cases = [
+            (
+                f"/wishlists/{wishlist_id + 1}/items/{item_id}",
+                f"Wishlist with id '{wishlist_id + 1}' was not found",
+            ),
+            (
+                f"/wishlists/{wishlist_id}/items/{item_id + 1}",
+                f"Item with id '{item_id + 1}' was not found in Wishlist '{wishlist_id}'",
+            ),
         ]
-        for path in paths:
+        for path, expected_message in cases:
             with self.subTest(path=path):
-                # A missing resource must produce the existing structured JSON error. BY_HYC
+                # A missing resource must produce the existing structured JSON error.
                 response = self.client.put(path, json={"product_id": 1002, "quantity": 2})
                 self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
                 self.assertTrue(response.is_json)
                 self.assertEqual(response.get_json()["status"], status.HTTP_404_NOT_FOUND)
-                self.assertIn("message", response.get_json())
+                self.assertEqual(
+                    response.get_json()["message"], f"404 Not Found: {expected_message}"
+                )
 
-        # Failed lookups must leave the existing records intact. BY_HYC
+        # Failed lookups must leave the existing records intact.
         db.session.remove()
         self.assertEqual(Item.find(item_id).serialize(), original)
         self.assertIsNotNone(WishList.find(wishlist_id))
 
     def test_update_item_from_another_wishlist(self):
         """It should reject an item that belongs to another wishlist"""
-        # Prepare two separate wishlists and preserve both items for comparison. BY_HYC
+        # Prepare two separate wishlists and preserve both items for comparison.
         wishlist_id, item_id = self._create_item_for_update("First wishlist")
         other_wishlist_id, other_item_id = self._create_item_for_update("Second wishlist")
         original = Item.find(item_id).serialize()
         other_original = Item.find(other_item_id).serialize()
 
-        # An existing item is still not found under the wrong parent URL. BY_HYC
+        # An existing item is still not found under the wrong parent URL.
         response = self.client.put(
             f"/wishlists/{wishlist_id}/items/{other_item_id}",
             json={"product_id": 1002, "quantity": 2},
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(response.is_json)
-        self.assertIn("message", response.get_json())
+        self.assertEqual(
+            response.get_json()["message"],
+            "404 Not Found: "
+            f"Item with id '{other_item_id}' was not found in Wishlist '{wishlist_id}'",
+        )
 
-        # Check fresh database state to ensure neither item was modified or moved. BY_HYC
+        # Check fresh database state to ensure neither item was modified or moved.
         db.session.remove()
         self.assertEqual(Item.find(item_id).serialize(), original)
         self.assertEqual(Item.find(other_item_id).serialize(), other_original)
@@ -321,7 +333,7 @@ class TestYourResourceService(TestCase):
 
     def test_update_wishlist_item_invalid_data(self):
         """It should return JSON 400 for invalid fields without changing stored data"""
-        # Exercise required fields, integer types, positive quantity, and the note schema. BY_HYC
+        # Exercise required fields, integer types, positive quantity, and the note schema.
         invalid_payloads = [
             {},
             {"product_id": 1002},
@@ -343,7 +355,7 @@ class TestYourResourceService(TestCase):
         ]
         for case_number, payload in enumerate(invalid_payloads):
             with self.subTest(payload=payload):
-                # Give each case independent records so one failed update cannot contaminate later cases. BY_HYC
+                # Give each case independent records so one failed update cannot contaminate later cases.
                 db.session.remove()
                 wishlist_id, item_id = self._create_item_for_update(f"Invalid input case {case_number}")
                 original = Item.find(item_id).serialize()
@@ -355,7 +367,7 @@ class TestYourResourceService(TestCase):
                 self.assertEqual(response.get_json()["status"], status.HTTP_400_BAD_REQUEST)
                 self.assertIn("message", response.get_json())
 
-                # Invalid input must not leave partial changes in memory or in the database. BY_HYC
+                # Invalid input must not leave partial changes in memory or in the database.
                 self.assertEqual(Item.find(item_id).serialize(), original)
                 db.session.remove()
                 self.assertEqual(Item.find(item_id).serialize(), original)
