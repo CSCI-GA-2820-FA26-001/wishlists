@@ -181,3 +181,26 @@ def get_wishlist(wishlist_id):
 
     app.logger.info("Returning Wishlist: %s", wishlist.name)
     return jsonify(wishlist.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+#  I T E M   E N D P O I N T S
+######################################################################
+
+
+@app.route("/wishlists/<int:wishlist_id>/items", methods=["GET"])
+def list_wishlist_items(wishlist_id):
+    """Returns all of the Items in a Wishlist"""
+    app.logger.info("Request for Items in Wishlist with id: %s", wishlist_id)
+
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found.",
+        )
+
+    items = sorted(wishlist.items, key=lambda item: item.id)
+    results = [item.serialize() for item in items]
+    app.logger.info("Returning %d items", len(results))
+    return jsonify(results), status.HTTP_200_OK
