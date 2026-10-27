@@ -169,6 +169,25 @@ class TestWishListModel(TestCase):
         self.assertEqual(same_wishlist.id, wishlist.id)
         self.assertEqual(same_wishlist.name, wishlist.name)
 
+    def test_find_by_customer_id(self):
+        """It should find all WishLists belonging to one customer"""
+        birthday = WishListFactory(name="Birthday", customer_id=1001)
+        birthday.create()
+        holiday = WishListFactory(name="Holiday", customer_id=1001)
+        holiday.create()
+        WishListFactory(name="Birthday", customer_id=1002).create()
+
+        wishlists = WishList.find_by_customer_id(1001)
+
+        self.assertEqual({wishlist.id for wishlist in wishlists}, {birthday.id, holiday.id})
+        self.assertTrue(all(wishlist.customer_id == 1001 for wishlist in wishlists))
+
+    def test_find_by_customer_id_not_found(self):
+        """It should return an empty list when a customer has no WishLists"""
+        WishListFactory(customer_id=1002).create()
+
+        self.assertEqual(WishList.find_by_customer_id(1001), [])
+
     def test_create_duplicate_wishlist_name_for_customer(self):
         """It should not create two WishLists with the same name for one customer"""
         wishlist = WishListFactory(name="Birthday", customer_id=1001)
