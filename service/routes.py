@@ -52,6 +52,12 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
+@app.route("/health", methods=["GET"])
+def health():
+    """Return the service health status."""
+    return jsonify(status="OK"), status.HTTP_200_OK
+
+
 @app.route("/wishlists/<int:wishlist_id>", methods=["DELETE"])
 def delete_wishlist(wishlist_id):
     """

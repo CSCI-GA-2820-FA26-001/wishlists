@@ -45,6 +45,7 @@ Deleting a wishlist also deletes all of its items.
 | Method   | URL                             | Description                    | Success          |
 | -------- | ------------------------------- | ------------------------------ | ---------------- |
 | `GET`    | `/`                             | Service information            | `200 OK`         |
+| `GET`    | `/health`                       | Service health status          | `200 OK`         |
 | `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
 | `GET`    | `/wishlists`                    | List all wishlists             | `200 OK`         |
 | `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
@@ -55,6 +56,10 @@ Deleting a wishlist also deletes all of its items.
 | `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
 | `PUT`    | `/wishlists/<id>/items/<item_id>` | Update a product in a wishlist | `200 OK`       |
 | `DELETE` | `/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist | `204 No Content` |
+
+### Health check
+
+`GET /health` returns `200 OK` with `Content-Type: application/json` and the JSON body `{"status":"OK"}` when the service is responding.
 
 ### Create a wishlist
 
