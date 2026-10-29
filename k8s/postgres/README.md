@@ -29,12 +29,23 @@ kubectl -n default get pvc postgres-data-wishlists-postgres-0 --ignore-not-found
 
 ## Create the Secret and deploy
 
-Generate the password directly into the Secret's input stream; do not print it,
-put it in command arguments, or save generated Secret YAML or credentials in Git.
-Run this only when the Secret does not already exist:
+Generate and validate the password before invoking `kubectl`, then pass it through
+stdin. The subshell disables tracing, stops on failure, and keeps the password
+out of command arguments and files. Run this only when the Secret does not
+already exist:
 
 ```sh
-openssl rand -hex 24 | tr -d '\n' | kubectl -n default create secret generic wishlists-postgres-secret --from-file=POSTGRES_PASSWORD=/dev/stdin
+(
+set +x
+set -eu
+unset postgres_password
+postgres_password="$(openssl rand -hex 24)" || exit 1
+case "$postgres_password" in
+  ''|*[!0-9a-f]*) echo 'Password generation failed validation' >&2; exit 1 ;;
+esac
+[ "${#postgres_password}" -eq 48 ] || { echo 'Password generation failed validation' >&2; exit 1; }
+printf '%s' "$postgres_password" | kubectl -n default create secret generic wishlists-postgres-secret --from-file=POSTGRES_PASSWORD=/dev/stdin
+unset postgres_password
 kubectl -n default get secret wishlists-postgres-secret
 kubectl -n default apply --dry-run=client -f k8s/postgres/
 kubectl -n default apply -f k8s/postgres/
@@ -43,6 +54,7 @@ kubectl -n default get statefulset wishlists-postgres
 kubectl -n default get pods -l app=wishlists-postgres
 kubectl -n default get pvc postgres-data-wishlists-postgres-0
 kubectl -n default get service wishlists-postgres
+)
 ```
 
 Expect StatefulSet 1/1 Ready, Pod `wishlists-postgres-0` Running and Ready,
