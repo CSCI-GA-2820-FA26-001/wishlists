@@ -17,6 +17,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: python:3.12-slim
 
     # PostgreSQL database used by the unit tests
     services:
@@ -37,15 +38,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel
-          pip install pipenv
+          apt-get update
+          apt-get install -y git curl gpg
+          python -m pip install --upgrade pip pipenv
           pipenv install --system --dev
 
       - name: Linting
@@ -57,12 +54,13 @@ jobs:
       - name: Run unit tests with PyTest
         run: pytest --pspec --cov=service --cov-fail-under=95 --cov-report=xml --disable-warnings
         env:
-          DATABASE_URI: "postgresql+psycopg://postgres:pgs3cr3t@localhost:5432/testdb"
+          DATABASE_URI: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/testdb"
           RETRY_COUNT: 1
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: CSCI-GA-2820-FA26-001/wishlists
           files: ./coverage.xml
           fail_ci_if_error: false
