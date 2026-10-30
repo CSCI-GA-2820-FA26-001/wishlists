@@ -23,7 +23,7 @@ and Delete WishList items
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import WishList, Item, DataValidationError
+from service.models import WishList, Item, DataValidationError, WishListQuery
 from service.common import status  # HTTP Status Codes
 
 
@@ -75,14 +75,16 @@ def delete_wishlist(wishlist_id):
 @app.route("/wishlists", methods=["GET"])
 def list_wishlists():
     """
-    List all Wishlists
+    List Wishlists, optionally filtered by customer_id
 
-    This endpoint returns every Wishlist, with its items, as a JSON array.
-    An empty array is returned when there are no Wishlists.
+    This endpoint returns matching Wishlists, with their items, as a JSON array.
+    Without a filter, all Wishlists are returned. An empty array is returned
+    when no Wishlists match.
     """
-    app.logger.info("Request to list all Wishlists")
+    app.logger.info("Request to list Wishlists")
 
-    wishlists = WishList.all()
+    query = WishListQuery().deserialize(request.args.to_dict(flat=False))
+    wishlists = query.find()
     results = [wishlist.serialize() for wishlist in wishlists]
 
     app.logger.info("Returning %d Wishlists", len(results))

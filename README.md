@@ -46,7 +46,7 @@ Deleting a wishlist also deletes all of its items.
 | -------- | ------------------------------- | ------------------------------ | ---------------- |
 | `GET`    | `/`                             | Service information            | `200 OK`         |
 | `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
-| `GET`    | `/wishlists`                    | List all wishlists             | `200 OK`         |
+| `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
 | `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
 | `PUT`    | `/wishlists/<id>`               | Update a wishlist              | `200 OK`         |
 | `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
@@ -85,9 +85,23 @@ The response also includes a `Location` header with the new wishlist's URL, for 
 
 Errors: `400` if `name` or `customer_id` is missing or the wrong type, `409` if the customer already has a wishlist with that name, `415` if the body isn't JSON.
 
-### List all wishlists
+### List wishlists
 
 `GET /wishlists` returns a JSON array of every wishlist, each with its items. It returns `[]` when there are none.
+
+To list the wishlists belonging to one customer, supply a `customer_id` query parameter:
+
+```http
+GET /wishlists?customer_id=1001
+```
+
+The response is `200 OK` with a JSON array of only that customer's wishlists, including their items.
+If the customer has no wishlists, the response is `200 OK` with `[]`.
+
+Only one integer `customer_id` query parameter is accepted per request. Empty, non-integer, comma-separated,
+or repeated values return `400 Bad Request` using the standard JSON error response.
+Requests without a `customer_id` filter continue to return all wishlists.
+Filtering does not change any stored wishlists or items.
 
 ### Read a wishlist
 
