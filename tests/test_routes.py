@@ -101,6 +101,14 @@ class TestYourResourceService(TestCase):
         self.assertTrue(listing.is_json)
         self.assertIsInstance(listing.get_json(), list)
 
+    def test_health(self):
+        """It should return the service health status as JSON"""
+        response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.get_json(), {"status": "OK"})
+
     ######################################################################
     #  D E L E T E   A   W I S H L I S T
     ######################################################################
