@@ -1,0 +1,39 @@
+# No host ports, existing databases, or persistent data volumes are used.
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: bdd-only
+      POSTGRES_DB: wishlists_bdd
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wishlists_bdd"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  app:
+    build:
+      context: .
+      dockerfile: .bdd/Dockerfile
+    command: gunicorn --bind 0.0.0.0:8080 wsgi:app
+    environment:
+      DATABASE_URI: postgresql+psycopg://postgres:bdd-only@postgres:5432/wishlists_bdd
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  bdd:
+    build:
+      context: .
+      dockerfile: .bdd/Dockerfile
+    command: behave --no-capture
+    environment:
+      BDD_BASE_URL: http://app:8080
+    depends_on:
+      app:
+        condition: service_healthy
