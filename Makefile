@@ -1,6 +1,6 @@
 # These can be overidden with env vars.
 REGISTRY ?= cluster-registry:5000
-IMAGE_NAME ?= petshop
+IMAGE_NAME ?= wishlists
 IMAGE_TAG ?= 1.0
 IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 PLATFORM ?= "linux/amd64,linux/arm64"
@@ -61,7 +61,7 @@ cluster: ## Create a K3D Kubernetes cluster with load balancer and registry
 .PHONY: cluster-rm
 cluster-rm: ## Remove a K3D Kubernetes cluster
 	$(info Removing Kubernetes cluster...)
-	k3d cluster delete nyu-devops
+	k3d cluster delete $(CLUSTER)
 
 .PHONY: import
 import: ## Import the image into the local K3D cluster
@@ -71,6 +71,9 @@ import: ## Import the image into the local K3D cluster
 .PHONY: deploy
 deploy: ## Deploy the service on local Kubernetes
 	$(info Deploying service locally...)
+	kubectl get secret wishlists-postgres-secret >/dev/null 2>&1 || { \
+		pw=$$(openssl rand -hex 24) && [ -n "$$pw" ] && \
+		printf '%s' "$$pw" | kubectl create secret generic wishlists-postgres-secret --from-file=POSTGRES_PASSWORD=/dev/stdin; }
 	kubectl apply -R -f k8s/
 
 ############################################################
