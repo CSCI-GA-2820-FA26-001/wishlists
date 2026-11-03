@@ -187,7 +187,7 @@ Response `201 Created`:
 
 `quantity` and `note` are optional. Any `wishlist_id` in the body is ignored; the one in the URL is used.
 
-Errors: `400` if `product_id` is missing or not an integer, or `quantity` is not an integer of at least 1, `404` if the wishlist doesn't exist, `415` if the body isn't JSON.
+Errors: `400` if the body isn't a JSON object, `product_id` is missing or not an integer, `quantity` is not an integer of at least 1, or `note` is not a string of at most 256 characters, `404` if the wishlist doesn't exist, `415` if the body isn't JSON.
 
 ### List the products in a wishlist
 

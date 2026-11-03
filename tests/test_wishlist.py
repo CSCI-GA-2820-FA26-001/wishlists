@@ -199,6 +199,26 @@ class TestWishListModel(TestCase):
         self.assertEqual(same_wishlist.id, wishlist.id)
         self.assertEqual(same_wishlist.name, wishlist.name)
 
+    def test_find_by_customer_and_name(self):
+        """It should find a customer's WishList by name"""
+        birthday = WishListFactory(name="Birthday", customer_id=1001)
+        birthday.create()
+        WishListFactory(name="Birthday", customer_id=2002).create()
+        found = WishList.find_by_customer_and_name(1001, "Birthday")
+        self.assertEqual(found.id, birthday.id)
+        self.assertIsNone(WishList.find_by_customer_and_name(1001, "Holiday"))
+
+    def test_deserialize_cannot_change_customer_id(self):
+        """It should not Deserialize a different customer_id into an owned WishList"""
+        wishlist = WishList(customer_id=1001)
+        self.assertRaises(
+            DataValidationError,
+            wishlist.deserialize,
+            {"name": "Birthday", "customer_id": 2002},
+        )
+        wishlist.deserialize({"name": "Birthday", "customer_id": 1001})
+        self.assertEqual(wishlist.name, "Birthday")
+
     def test_find_by_customer_id(self):
         """It should find all WishLists belonging to one customer"""
         birthday = WishListFactory(name="Birthday", customer_id=1001)

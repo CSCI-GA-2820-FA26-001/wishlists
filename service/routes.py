@@ -23,7 +23,7 @@ and Delete WishList items
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import WishList, Item, DataValidationError, WishListQuery, ItemQuery
+from service.models import WishList, Item, WishListQuery, ItemQuery
 from service.common import status  # HTTP Status Codes
 
 
@@ -114,17 +114,9 @@ def create_wishlist_item(wishlist_id):
             description=f"Wishlist with id '{wishlist_id}' was not found.",
         )
 
-    data = request.get_json()
-    if not isinstance(data, dict):
-        raise DataValidationError("Invalid Item: request body must be a JSON object")
-
-    data["wishlist_id"] = wishlist_id
-    data.setdefault("quantity", 1)
-
     item = Item()
-    item.deserialize(data)
-    if isinstance(item.product_id, bool) or not isinstance(item.product_id, int):
-        raise DataValidationError("Invalid Item: product_id must be an integer")
+    item.deserialize(request.get_json(), default_quantity=1)
+    item.wishlist_id = wishlist_id  # the URL decides the Wishlist, not the body
     item.create()
 
     app.logger.info("Item with id %s added to Wishlist %s", item.id, wishlist_id)
@@ -168,11 +160,7 @@ def create_wishlist():
     app.logger.info("Request to create a Wishlist")
     wishlist = WishList()
     wishlist.deserialize(request.get_json())
-    existing = WishList.query.filter_by(
-        customer_id=wishlist.customer_id,
-        name=wishlist.name,
-    ).first()
-    if existing:
+    if WishList.find_by_customer_and_name(wishlist.customer_id, wishlist.name):
         abort(
             status.HTTP_409_CONFLICT,
             description="Wishlist already exists for this customer",
@@ -207,26 +195,8 @@ def update_wishlist_item(wishlist_id, item_id):
             description=f"Item with id '{item_id}' was not found in Wishlist '{wishlist_id}'",
         )
 
-    # Require a JSON object before passing its fields to the existing model validation.
-    data = request.get_json()
-    if not isinstance(data, dict):
-        raise DataValidationError("Item data must be a JSON object")
-
-    # Reject implicit database conversions; a product ID must be a JSON integer, not a boolean.
-    product_id = data.get("product_id")
-    if isinstance(product_id, bool) or not isinstance(product_id, int):
-        raise DataValidationError("product_id is required and must be an integer")
-
-    # Match the existing nullable String(256) column before changing the persisted item.
-    note = data.get("note")
-    if note is not None and (not isinstance(note, str) or len(note) > 256):
-        raise DataValidationError(
-            "note must be null or a string of at most 256 characters"
-        )
-
     # Validate on an unsaved object so rejected input does not partially alter the stored item.
-    candidate = Item()
-    candidate.deserialize({**data, "wishlist_id": wishlist_id})
+    candidate = Item().deserialize(request.get_json())
 
     # Copy only editable fields, preserving the item's ID and its wishlist association.
     item.product_id = candidate.product_id
@@ -282,25 +252,17 @@ def update_wishlist(wishlist_id):
             status.HTTP_404_NOT_FOUND,
             description=f"Wishlist with id '{wishlist_id}' was not found",
         )
-    data = request.get_json()
-    # Validate on a detached copy so a rejected request leaves the record untouched
-    updated = WishList().deserialize(data)
-    if updated.customer_id != wishlist.customer_id:
-        abort(
-            status.HTTP_400_BAD_REQUEST,
-            description="customer_id of a Wishlist cannot be changed",
-        )
-    existing = WishList.query.filter(
-        WishList.id != wishlist_id,
-        WishList.customer_id == updated.customer_id,
-        WishList.name == updated.name,
-    ).first()
-    if existing:
+    # Validate on a detached copy (with the current owner) so a rejected
+    # request leaves the stored record untouched
+    updated = WishList(customer_id=wishlist.customer_id).deserialize(request.get_json())
+    existing = WishList.find_by_customer_and_name(updated.customer_id, updated.name)
+    if existing and existing.id != wishlist_id:
         abort(
             status.HTTP_409_CONFLICT,
             description="Wishlist already exists for this customer",
         )
-    wishlist.deserialize(data)
+    wishlist.name = updated.name
+    wishlist.note = updated.note
     wishlist.update()
     app.logger.info("Wishlist with id %s updated", wishlist_id)
     return jsonify(wishlist.serialize()), status.HTTP_200_OK

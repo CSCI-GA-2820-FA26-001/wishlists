@@ -776,6 +776,9 @@ class TestYourResourceService(TestCase):
             {"product_id": True},                    # product_id is a boolean
             {"product_id": 2001, "quantity": 0},     # quantity below 1
             {"product_id": 2001, "quantity": "2"},   # quantity not an integer
+            {"product_id": 2001, "note": 123},       # note not a string
+            {"product_id": 2001, "note": ["x"]},     # note not a string
+            {"product_id": 2001, "note": "x" * 257},  # note too long
             [{"product_id": 2001}],                  # body is not an object
         ]
         for payload in invalid_payloads:
@@ -831,6 +834,20 @@ class TestYourResourceService(TestCase):
         self.assertEqual(len(data[0]["items"]), 1)
         self.assertEqual(data[0]["items"][0]["id"], item.id)
         self.assertEqual(data[0]["items"][0]["product_id"], item.product_id)
+
+    def test_add_item_body_not_an_object(self):
+        """It should explain that the item body must be a JSON object"""
+        wishlist = self._create_wishlist()
+        for body in ["null", "[]", '"text"']:
+            with self.subTest(body=body):
+                response = self.client.post(
+                    f"/wishlists/{wishlist.id}/items",
+                    data=body,
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("must be a JSON object", response.get_json()["message"])
+        self.assertEqual(len(Item.all()), 0)
 
     def test_add_item_requires_json(self):
         """It should return 415 when the request is not JSON"""

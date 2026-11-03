@@ -256,6 +256,43 @@ class TestItemModel(TestCase):
         item = Item()
         self.assertRaises(DataValidationError, item.deserialize, InvalidData())
 
+    def test_deserialize_item_default_quantity(self):
+        """It should use the default quantity when none is given"""
+        item = Item().deserialize({"product_id": 1234}, default_quantity=1)
+        self.assertEqual(item.quantity, 1)
+        item = Item().deserialize(
+            {"product_id": 1234, "quantity": 4}, default_quantity=1
+        )
+        self.assertEqual(item.quantity, 4)
+
+    def test_deserialize_item_without_wishlist_id(self):
+        """It should deserialize an item without a wishlist_id"""
+        item = Item().deserialize({"product_id": 1234, "quantity": 2})
+        self.assertIsNone(item.wishlist_id)
+        self.assertEqual(item.product_id, 1234)
+
+    def test_deserialize_item_bad_product_id(self):
+        """It should not deserialize an item with a non-integer product_id"""
+        for bad in ["1234", True, 12.5, None]:
+            with self.subTest(product_id=bad):
+                self.assertRaises(
+                    DataValidationError,
+                    Item().deserialize,
+                    {"product_id": bad, "quantity": 1},
+                )
+
+    def test_deserialize_item_bad_note(self):
+        """It should not deserialize an item with an invalid note"""
+        for bad in [123, "x" * 257]:
+            with self.subTest(note=bad):
+                self.assertRaises(
+                    DataValidationError,
+                    Item().deserialize,
+                    {"product_id": 1234, "quantity": 1, "note": bad},
+                )
+        item = Item().deserialize({"product_id": 1234, "quantity": 1, "note": "x" * 256})
+        self.assertEqual(len(item.note), 256)
+
     def test_find_items_by_product_id(self):
         """It should find only the Items for a product within one wishlist"""
         wishlist = WishListFactory()
