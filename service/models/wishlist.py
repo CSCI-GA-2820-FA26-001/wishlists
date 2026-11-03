@@ -59,6 +59,11 @@ class WishList(db.Model, PersistentBase):
             wishlist["items"].append(item.serialize())
         return wishlist
 
+    def clear_items(self) -> None:
+        """Remove all items and persist the wishlist without deleting it"""
+        self.items.clear()
+        self.update()
+
     def deserialize(self, data: dict) -> "WishList":
         """
         Convert a dictionary into a WishList

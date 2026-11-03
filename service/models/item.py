@@ -19,6 +19,15 @@ class Item(db.Model, PersistentBase):
     quantity = db.Column(db.Integer, nullable=False, default=1)
     note = db.Column(db.String(256), nullable=True)  # optional note field
 
+    @classmethod
+    def find_by_product_id(cls, wishlist_id: int, product_id: int):
+        """Returns the Items for the given product in one WishList, ordered by id"""
+        return (
+            cls.query.filter(cls.wishlist_id == wishlist_id, cls.product_id == product_id)
+            .order_by(cls.id)
+            .all()
+        )
+
     def serialize(self) -> dict:
         """Convert an Item into a dictionary"""
         return {

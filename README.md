@@ -52,9 +52,10 @@ Deleting a wishlist also deletes all of its items.
 | `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
 | `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
 | `PUT`    | `/wishlists/<id>`               | Update a wishlist              | `200 OK`         |
+| `PUT`    | `/wishlists/<id>/clear`         | Clear all items from a wishlist | `200 OK`        |
 | `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
 | `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
-| `GET`    | `/wishlists/<id>/items`         | List the products in a wishlist | `200 OK`        |
+| `GET`    | `/wishlists/<id>/items`         | List or filter the products in a wishlist | `200 OK` |
 | `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
 | `PUT`    | `/wishlists/<id>/items/<item_id>` | Update a product in a wishlist | `200 OK`       |
 | `DELETE` | `/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist | `204 No Content` |
@@ -131,6 +132,30 @@ This replaces the whole wishlist, so send every field you want to keep (`name` a
 
 Errors: `400` for missing or invalid fields, or if `customer_id` is different from the wishlist's current owner (the owner can't be changed), `404` if the wishlist doesn't exist, `409` if the customer already has another wishlist with that name, `415` if the body isn't JSON.
 
+### Clear all items from a wishlist
+
+```http
+PUT /wishlists/1/clear
+```
+
+No request body is required. This removes only the items in the selected wishlist, keeping the wishlist and its existing `id`, `name`, `customer_id`, and `note` unchanged. Other wishlists and their items are not affected.
+
+Response `200 OK` with the wishlist JSON and `items: []`:
+
+```json
+{
+  "id": 1,
+  "name": "Birthday",
+  "customer_id": 1001,
+  "note": "Ideas for my birthday",
+  "items": []
+}
+```
+
+Clearing an empty wishlist also returns `200 OK` with the unchanged wishlist JSON.
+
+Errors: `404` with a JSON error response if the wishlist doesn't exist.
+
 ### Delete a wishlist
 
 `DELETE /wishlists/<id>` deletes the wishlist and all of its items. It returns `204 No Content` with an empty body, even if the wishlist didn't exist.
@@ -167,6 +192,19 @@ Errors: `400` if the body isn't a JSON object, `product_id` is missing or not an
 ### List the products in a wishlist
 
 `GET /wishlists/<id>/items` returns a JSON array of the wishlist's items, sorted by item `id`. It returns `[]` when the wishlist has no items, and `404` if the wishlist doesn't exist.
+
+To check whether a product is already saved in a wishlist, supply a `product_id` query parameter:
+
+```http
+GET /wishlists/1/items?product_id=2001
+```
+
+The response is `200 OK` with a JSON array of only the items for that product in this wishlist, sorted by item `id`.
+If the product isn't in this wishlist (even if it is saved in another one), the response is `200 OK` with `[]`.
+
+Only one integer `product_id` query parameter is accepted per request. Empty, non-integer, comma-separated,
+or repeated values return `400 Bad Request` using the standard JSON error response.
+Requests without a `product_id` filter continue to return all items in the wishlist.
 
 ### Read a product in a wishlist
 
@@ -291,7 +329,8 @@ service/                   - service Python package
 ├── models/                - database models
 │   ├── persistent_base.py - shared create/update/delete/find methods
 │   ├── wishlist.py        - Wishlist model
-│   └── item.py            - Item model
+│   ├── item.py            - Item model
+│   └── item_query.py      - product_id filter for listing items
 └── common/                - common code
     ├── cli_commands.py    - Flask command to recreate all tables
     ├── error_handlers.py  - JSON error responses
@@ -303,7 +342,9 @@ tests/                     - test suites
 ├── test_cli_commands.py   - CLI tests
 ├── test_error_handlers.py - error handler tests
 ├── test_wishlist.py       - Wishlist model tests
+├── test_wishlist_clear.py - Wishlist clear action API tests
 ├── test_item.py           - Item model tests
+├── test_item_query.py     - product_id filter API tests
 └── test_routes.py         - REST API tests
 ```
 

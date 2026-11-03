@@ -23,7 +23,7 @@ and Delete WishList items
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import WishList, Item, WishListQuery
+from service.models import WishList, Item, DataValidationError, WishListQuery, ItemQuery
 from service.common import status  # HTTP Status Codes
 
 
@@ -51,6 +51,7 @@ def index():
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
+
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -204,7 +205,9 @@ def update_wishlist_item(wishlist_id, item_id):
     item.update()
 
     # Log success only after the database update has completed.
-    app.logger.info("Item %s in wishlist %s updated; returning 200 OK", item_id, wishlist_id)
+    app.logger.info(
+        "Item %s in wishlist %s updated; returning 200 OK", item_id, wishlist_id
+    )
 
     # Return the updated item itself, rather than the entire wishlist, as required by #15.
     return jsonify(item.serialize()), status.HTTP_200_OK
@@ -222,10 +225,18 @@ def delete_wishlist_item(wishlist_id, item_id):
     if item is not None:
         item.delete()
         # Log success only after the existing model method commits the deletion.
-        app.logger.info("Item %s deleted from wishlist %s; returning 204 No Content", item_id, wishlist_id)
+        app.logger.info(
+            "Item %s deleted from wishlist %s; returning 204 No Content",
+            item_id,
+            wishlist_id,
+        )
     else:
         # An absent item under this URL requires no deletion, including an absent parent.
-        app.logger.info("Item %s not found in wishlist %s; returning 204 No Content", item_id, wishlist_id)
+        app.logger.info(
+            "Item %s not found in wishlist %s; returning 204 No Content",
+            item_id,
+            wishlist_id,
+        )
 
     # Story #3 returns no response body whether or not the item was present.
     return "", status.HTTP_204_NO_CONTENT
@@ -257,6 +268,21 @@ def update_wishlist(wishlist_id):
     return jsonify(wishlist.serialize()), status.HTTP_200_OK
 
 
+@app.route("/wishlists/<int:wishlist_id>/clear", methods=["PUT"])
+def clear_wishlist(wishlist_id):
+    """Clear all items while keeping the Wishlist"""
+    app.logger.info("Request to clear Wishlist with id %s", wishlist_id)
+    wishlist = WishList.find(wishlist_id)
+    if not wishlist:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            description=f"Wishlist with id '{wishlist_id}' was not found",
+        )
+    wishlist.clear_items()
+    app.logger.info("Wishlist with id %s cleared", wishlist_id)
+    return jsonify(wishlist.serialize()), status.HTTP_200_OK
+
+
 @app.route("/wishlists/<int:wishlist_id>", methods=["GET"])
 def get_wishlist(wishlist_id):
     """
@@ -284,7 +310,7 @@ def get_wishlist(wishlist_id):
 
 @app.route("/wishlists/<int:wishlist_id>/items", methods=["GET"])
 def list_wishlist_items(wishlist_id):
-    """Returns all of the Items in a Wishlist"""
+    """Returns the Items in a Wishlist, optionally filtered by product_id"""
     app.logger.info("Request for Items in Wishlist with id: %s", wishlist_id)
 
     wishlist = WishList.find(wishlist_id)
@@ -294,7 +320,8 @@ def list_wishlist_items(wishlist_id):
             description=f"Wishlist with id '{wishlist_id}' was not found.",
         )
 
-    items = sorted(wishlist.items, key=lambda item: item.id)
+    query = ItemQuery().deserialize(request.args.to_dict(flat=False))
+    items = query.find(wishlist)
     results = [item.serialize() for item in items]
     app.logger.info("Returning %d items", len(results))
     return jsonify(results), status.HTTP_200_OK
