@@ -71,9 +71,9 @@ import: ## Import the image into the local K3D cluster
 .PHONY: deploy
 deploy: ## Deploy the service on local Kubernetes
 	$(info Deploying service locally...)
-	kubectl get secret wishlists-postgres-secret >/dev/null 2>&1 || \
-		openssl rand -hex 24 | tr -d '\n' | \
-		kubectl create secret generic wishlists-postgres-secret --from-file=POSTGRES_PASSWORD=/dev/stdin
+	kubectl get secret wishlists-postgres-secret >/dev/null 2>&1 || { \
+		pw=$$(openssl rand -hex 24) && [ -n "$$pw" ] && \
+		printf '%s' "$$pw" | kubectl create secret generic wishlists-postgres-secret --from-file=POSTGRES_PASSWORD=/dev/stdin; }
 	kubectl apply -R -f k8s/
 
 ############################################################

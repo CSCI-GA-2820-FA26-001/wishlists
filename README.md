@@ -341,7 +341,7 @@ curl -i http://localhost:8080/health
 
 When both Pods are `Running` and `1/1` Ready, `/health` returns `200 OK` with `{"status":"OK"}`.
 
-Remove the cluster with `make cluster-rm`. If `make push` can't reach `cluster-registry`, add the registry to `/etc/hosts` (the dev container normally does this when it is created):
+Remove the cluster with `make cluster-rm`. If `make push` fails with `no such host` for `cluster-registry`, add the registry to `/etc/hosts` (the dev container normally does this when it is created):
 
 ```bash
 sudo bash -c "echo '127.0.0.1    cluster-registry' >> /etc/hosts"
