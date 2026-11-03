@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wishlist administration</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <script src="{{ url_for('static', filename='admin.js') }}" defer></script>
+</head>
+<body>
+  <main>
+    <h1>Wishlist administration</h1>
+    <p>Create a wishlist or retrieve an existing one by its ID.</p>
+    <section aria-labelledby="create-heading">
+      <h2 id="create-heading">Create a wishlist</h2>
+      <form id="create-form">
+        <label for="name">Name</label>
+        <input id="name" name="name" required maxlength="64">
+        <label for="customer-id">Customer ID</label>
+        <input id="customer-id" name="customer_id" type="number" step="1" min="-2147483648" max="2147483647" required>
+        <label for="note">Note (optional)</label>
+        <textarea id="note" name="note" maxlength="256"></textarea>
+        <button type="submit">Create wishlist</button>
+      </form>
+    </section>
+    <section aria-labelledby="retrieve-heading">
+      <h2 id="retrieve-heading">Retrieve a wishlist</h2>
+      <form id="retrieve-form">
+        <label for="wishlist-id">Wishlist ID</label>
+        <input id="wishlist-id" type="number" min="1" max="2147483647" step="1" required>
+        <button type="submit">Retrieve wishlist</button>
+      </form>
+    </section>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="result" aria-labelledby="result-heading" hidden>
+      <h2 id="result-heading">Wishlist details</h2>
+      <dl>
+        <dt>ID</dt><dd id="result-id"></dd>
+        <dt>Name</dt><dd id="result-name"></dd>
+        <dt>Customer ID</dt><dd id="result-customer"></dd>
+        <dt>Note</dt><dd id="result-note"></dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>
