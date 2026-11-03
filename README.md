@@ -296,6 +296,19 @@ curl -i -X POST http://localhost:8080/wishlists \
   -d '{"name": "Birthday", "customer_id": 1001}'
 ```
 
+## Admin UI
+
+With the service running (`make run`), open `http://localhost:8080/admin`.
+Create a wishlist using its name, customer ID, and optional note. The page shows
+its saved ID and details. To retrieve it later, enter that ID and select
+**Retrieve wishlist**. Refreshing the page clears the displayed details; retrieve
+by ID again to read the saved data from PostgreSQL.
+
+The page displays API errors, including duplicate names and missing wishlist IDs.
+This initial UI supports creating and retrieving wishlist details only; item
+management and editing/deleting wishlists are not included. It adds no login or
+permissions system. The existing `/` JSON response and REST API remain unchanged.
+
 ## Testing
 
 ```bash
