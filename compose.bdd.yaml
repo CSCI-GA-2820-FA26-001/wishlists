@@ -12,7 +12,7 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
-  app:
+  wishlist:
     build:
       context: .
       dockerfile: .bdd/Dockerfile
@@ -33,7 +33,7 @@ services:
       dockerfile: .bdd/Dockerfile
     command: behave --no-capture
     environment:
-      BDD_BASE_URL: http://app:8080
+      BDD_BASE_URL: http://wishlist:8080
     depends_on:
-      app:
+      wishlist:
         condition: service_healthy

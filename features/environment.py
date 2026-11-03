@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 
 def before_all(context):
     """Use a configurable URL and a locally installed Chromium/Chrome driver."""
-    context.base_url = os.getenv("BDD_BASE_URL", "http://app:8080").rstrip("/")
+    context.base_url = os.getenv("BDD_BASE_URL", "http://wishlist:8080").rstrip("/")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")  # Chromium runs inside the disposable test container.
