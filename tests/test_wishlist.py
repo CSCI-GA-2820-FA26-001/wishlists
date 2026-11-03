@@ -58,7 +58,7 @@ class TestWishListModel(TestCase):
             id=fake_wishlist.id,
             name=fake_wishlist.name,
             customer_id=fake_wishlist.customer_id,
-            note=fake_wishlist.note
+            note=fake_wishlist.note,
         )
         self.assertIsNotNone(wishlist)
         self.assertEqual(wishlist.id, fake_wishlist.id)
@@ -142,6 +142,36 @@ class TestWishListModel(TestCase):
         wishlists = WishList.all()
         self.assertEqual(len(wishlists), 0)
 
+    def test_clear_items(self):
+        """It should persist item removal while preserving both wishlists"""
+        wishlist = WishListFactory(items=ItemFactory.create_batch(2))
+        wishlist.create()
+        other = WishListFactory(items=[ItemFactory()])
+        other.create()
+        wishlist_id, other_id = wishlist.id, other.id
+        expected = wishlist.serialize()
+        expected["items"] = []
+        other_data = other.serialize()
+
+        wishlist.clear_items()
+        db.session.remove()
+
+        self.assertEqual(WishList.find(wishlist_id).serialize(), expected)
+        self.assertEqual(Item.query.filter_by(wishlist_id=wishlist_id).count(), 0)
+        self.assertEqual(WishList.find(other_id).serialize(), other_data)
+
+    def test_clear_empty_wishlist(self):
+        """It should allow clearing an empty wishlist repeatedly"""
+        wishlist = WishListFactory()
+        wishlist.create()
+        wishlist_id = wishlist.id
+        expected = wishlist.serialize()
+
+        for _ in range(2):
+            WishList.find(wishlist_id).clear_items()
+            db.session.remove()
+            self.assertEqual(WishList.find(wishlist_id).serialize(), expected)
+
     @patch("service.models.db.session.commit")
     def test_delete_wishlist_failed(self, exception_mock):
         """It should not delete an WishList on database error"""
@@ -179,7 +209,9 @@ class TestWishListModel(TestCase):
 
         wishlists = WishList.find_by_customer_id(1001)
 
-        self.assertEqual({wishlist.id for wishlist in wishlists}, {birthday.id, holiday.id})
+        self.assertEqual(
+            {wishlist.id for wishlist in wishlists}, {birthday.id, holiday.id}
+        )
         self.assertTrue(all(wishlist.customer_id == 1001 for wishlist in wishlists))
 
     def test_find_by_customer_id_not_found(self):

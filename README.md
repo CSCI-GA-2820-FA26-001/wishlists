@@ -52,6 +52,7 @@ Deleting a wishlist also deletes all of its items.
 | `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
 | `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
 | `PUT`    | `/wishlists/<id>`               | Update a wishlist              | `200 OK`         |
+| `PUT`    | `/wishlists/<id>/clear`         | Clear all items from a wishlist | `200 OK`        |
 | `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
 | `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
 | `GET`    | `/wishlists/<id>/items`         | List the products in a wishlist | `200 OK`        |
@@ -130,6 +131,30 @@ Content-Type: application/json
 This replaces the whole wishlist, so send every field you want to keep (`name` and `customer_id` are required). Fields you leave out, such as `note`, are cleared. Items are not changed. Returns `200 OK` with the updated wishlist.
 
 Errors: `400` for missing or invalid fields, or if `customer_id` is different from the wishlist's current owner (the owner can't be changed), `404` if the wishlist doesn't exist, `409` if the customer already has another wishlist with that name, `415` if the body isn't JSON.
+
+### Clear all items from a wishlist
+
+```http
+PUT /wishlists/1/clear
+```
+
+No request body is required. This removes only the items in the selected wishlist, keeping the wishlist and its existing `id`, `name`, `customer_id`, and `note` unchanged. Other wishlists and their items are not affected.
+
+Response `200 OK` with the wishlist JSON and `items: []`:
+
+```json
+{
+  "id": 1,
+  "name": "Birthday",
+  "customer_id": 1001,
+  "note": "Ideas for my birthday",
+  "items": []
+}
+```
+
+Clearing an empty wishlist also returns `200 OK` with the unchanged wishlist JSON.
+
+Errors: `404` with a JSON error response if the wishlist doesn't exist.
 
 ### Delete a wishlist
 
@@ -303,6 +328,7 @@ tests/                     - test suites
 ├── test_cli_commands.py   - CLI tests
 ├── test_error_handlers.py - error handler tests
 ├── test_wishlist.py       - Wishlist model tests
+├── test_wishlist_clear.py - Wishlist clear action API tests
 ├── test_item.py           - Item model tests
 └── test_routes.py         - REST API tests
 ```
