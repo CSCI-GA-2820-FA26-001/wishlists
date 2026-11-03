@@ -55,7 +55,7 @@ Deleting a wishlist also deletes all of its items.
 | `PUT`    | `/wishlists/<id>/clear`         | Clear all items from a wishlist | `200 OK`        |
 | `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
 | `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
-| `GET`    | `/wishlists/<id>/items`         | List the products in a wishlist | `200 OK`        |
+| `GET`    | `/wishlists/<id>/items`         | List or filter the products in a wishlist | `200 OK` |
 | `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
 | `PUT`    | `/wishlists/<id>/items/<item_id>` | Update a product in a wishlist | `200 OK`       |
 | `DELETE` | `/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist | `204 No Content` |
@@ -193,6 +193,19 @@ Errors: `400` if `product_id` is missing or not an integer, or `quantity` is not
 
 `GET /wishlists/<id>/items` returns a JSON array of the wishlist's items, sorted by item `id`. It returns `[]` when the wishlist has no items, and `404` if the wishlist doesn't exist.
 
+To check whether a product is already saved in a wishlist, supply a `product_id` query parameter:
+
+```http
+GET /wishlists/1/items?product_id=2001
+```
+
+The response is `200 OK` with a JSON array of only the items for that product in this wishlist, sorted by item `id`.
+If the product isn't in this wishlist (even if it is saved in another one), the response is `200 OK` with `[]`.
+
+Only one integer `product_id` query parameter is accepted per request. Empty, non-integer, comma-separated,
+or repeated values return `400 Bad Request` using the standard JSON error response.
+Requests without a `product_id` filter continue to return all items in the wishlist.
+
 ### Read a product in a wishlist
 
 `GET /wishlists/<id>/items/<item_id>` returns a single item as JSON. Returns `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist.
@@ -316,7 +329,8 @@ service/                   - service Python package
 ├── models/                - database models
 │   ├── persistent_base.py - shared create/update/delete/find methods
 │   ├── wishlist.py        - Wishlist model
-│   └── item.py            - Item model
+│   ├── item.py            - Item model
+│   └── item_query.py      - product_id filter for listing items
 └── common/                - common code
     ├── cli_commands.py    - Flask command to recreate all tables
     ├── error_handlers.py  - JSON error responses
@@ -330,6 +344,7 @@ tests/                     - test suites
 ├── test_wishlist.py       - Wishlist model tests
 ├── test_wishlist_clear.py - Wishlist clear action API tests
 ├── test_item.py           - Item model tests
+├── test_item_query.py     - product_id filter API tests
 └── test_routes.py         - REST API tests
 ```
 

@@ -255,3 +255,23 @@ class TestItemModel(TestCase):
 
         item = Item()
         self.assertRaises(DataValidationError, item.deserialize, InvalidData())
+
+    def test_find_items_by_product_id(self):
+        """It should find only the Items for a product within one wishlist"""
+        wishlist = WishListFactory()
+        wishlist.items.append(ItemFactory(wishlist=wishlist, product_id=123))
+        wishlist.items.append(ItemFactory(wishlist=wishlist, product_id=123))
+        wishlist.items.append(ItemFactory(wishlist=wishlist, product_id=456))
+        wishlist.create()
+        other = WishListFactory()
+        other.items.append(ItemFactory(wishlist=other, product_id=123))
+        other.create()
+
+        found = Item.find_by_product_id(wishlist.id, 123)
+        self.assertEqual(len(found), 2)
+        self.assertEqual([item.id for item in found], sorted(item.id for item in found))
+        for item in found:
+            self.assertEqual(item.wishlist_id, wishlist.id)
+            self.assertEqual(item.product_id, 123)
+
+        self.assertEqual(Item.find_by_product_id(wishlist.id, 789), [])
