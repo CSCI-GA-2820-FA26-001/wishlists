@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wishlists
+  labels:
+    app: wishlists
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wishlists
+  template:
+    metadata:
+      labels:
+        app: wishlists
+    spec:
+      restartPolicy: Always
+      # Wait for PostgreSQL so the service does not crash while the database starts
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16
+          command:
+            - sh
+            - -c
+            - until pg_isready -h wishlists-postgres -p 5432; do echo waiting for postgres; sleep 2; done
+      containers:
+        - name: wishlists
+          image: cluster-registry:5000/wishlists:1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            # Must be defined before DATABASE_URI so that $(POSTGRES_PASSWORD) is expanded
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wishlists-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URI
+              value: postgresql+psycopg://postgres:$(POSTGRES_PASSWORD)@wishlists-postgres:5432/wishlists
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

@@ -319,9 +319,44 @@ The tests use the PostgreSQL database in the dev container. If you see `failed t
 docker start wishlists_devcontainer-postgres-1
 ```
 
+## Deploying to Kubernetes
+
+The service can run on a local [K3S](https://k3s.io/) cluster created with [k3d](https://k3d.io/) inside the dev container. Run these commands in the VS Code terminal:
+
+```bash
+make cluster   # create the nyu-devops cluster with a local registry and ingress on port 8080
+make build     # build the cluster-registry:5000/wishlists:1.0 image from the Dockerfile
+make push      # push the image to the cluster registry
+make deploy    # create the database Secret if needed and apply everything in k8s/
+```
+
+`make deploy` creates the `wishlists-postgres-secret` Secret with a random password the first time it runs and reuses it afterwards. It then deploys PostgreSQL as a StatefulSet (see [k8s/postgres/README.md](k8s/postgres/README.md)) and the service as a Deployment. The service waits for PostgreSQL to be ready before it starts, and connects to it through the `wishlists-postgres` Service.
+
+Check that everything is running, then call the service through the ingress:
+
+```bash
+kubectl get pods
+curl -i http://localhost:8080/health
+```
+
+When both Pods are `Running` and `1/1` Ready, `/health` returns `200 OK` with `{"status":"OK"}`.
+
+Remove the cluster with `make cluster-rm`. If `make push` can't reach `cluster-registry`, add the registry to `/etc/hosts` (the dev container normally does this when it is created):
+
+```bash
+sudo bash -c "echo '127.0.0.1    cluster-registry' >> /etc/hosts"
+```
+
 ## Project Structure
 
 ```text
+Dockerfile                 - production image for the service
+k8s/                       - Kubernetes manifests applied by make deploy
+├── deployment.yaml        - service Deployment with /health probes
+├── service.yaml           - ClusterIP Service on port 8080
+├── ingress.yaml           - ingress routing / to the service
+└── postgres/              - PostgreSQL StatefulSet and Service
+
 service/                   - service Python package
 ├── __init__.py            - app factory
 ├── config.py              - configuration parameters
