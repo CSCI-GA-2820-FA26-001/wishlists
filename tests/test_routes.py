@@ -101,6 +101,14 @@ class TestYourResourceService(TestCase):
         self.assertTrue(listing.is_json)
         self.assertIsInstance(listing.get_json(), list)
 
+    def test_admin(self):
+        """It should serve the wishlist administration page separately from the API"""
+        response = self.client.get("/admin")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("text/html", response.content_type)
+        self.assertIn(b"Create a wishlist", response.data)
+        self.assertIn(b"Retrieve a wishlist", response.data)
+
     def test_health(self):
         """It should return the service health status as JSON"""
         response = self.client.get("/health")
