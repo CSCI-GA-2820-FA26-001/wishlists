@@ -39,6 +39,8 @@ class Item(db.Model, PersistentBase):
             default_quantity: quantity to use when none is given
                 (None means quantity is required)
         """
+        if not isinstance(data, dict):
+            raise DataValidationError("Invalid Item: request body must be a JSON object")
         try:
             product_id = data["product_id"]
             if isinstance(product_id, bool) or not isinstance(product_id, int):
@@ -66,15 +68,8 @@ class Item(db.Model, PersistentBase):
             self.product_id = product_id
             self.quantity = quantity
             self.note = note
-        except AttributeError as error:
-            raise DataValidationError("Invalid Item attribute: " + error.args[0]) from error
         except KeyError as error:
             raise DataValidationError(
                 "Invalid Item: missing " + error.args[0]
-            ) from error
-        except TypeError as error:
-            raise DataValidationError(
-                "Invalid Item: body of request contained bad or no data "
-                + str(error)
             ) from error
         return self
