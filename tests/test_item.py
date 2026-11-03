@@ -292,6 +292,7 @@ class TestItemModel(TestCase):
                 )
         item = Item().deserialize({"product_id": 1234, "quantity": 1, "note": "x" * 256})
         self.assertEqual(len(item.note), 256)
+
     def test_find_items_by_product_id(self):
         """It should find only the Items for a product within one wishlist"""
         wishlist = WishListFactory()

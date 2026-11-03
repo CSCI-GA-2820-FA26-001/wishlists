@@ -23,7 +23,7 @@ and Delete WishList items
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import WishList, Item, DataValidationError, WishListQuery, ItemQuery
+from service.models import WishList, Item, WishListQuery, ItemQuery
 from service.common import status  # HTTP Status Codes
 
 
