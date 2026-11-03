@@ -35,6 +35,13 @@ class WishList(db.Model, PersistentBase):
         return cls.query.filter(cls.name == name).all()
 
     @classmethod
+    def find_by_customer_and_name(cls, customer_id: int, name: str):
+        """Returns the WishList a customer has with the given name, or None"""
+        return cls.query.filter(
+            cls.customer_id == customer_id, cls.name == name
+        ).first()
+
+    @classmethod
     def find_by_customer_id(cls, customer_id: int):
         """Returns all WishLists belonging to the given customer"""
         return cls.query.filter(cls.customer_id == customer_id).all()
@@ -70,6 +77,11 @@ class WishList(db.Model, PersistentBase):
             if isinstance(customer_id, bool) or not isinstance(customer_id, int):
                 raise DataValidationError(
                     "Invalid type for integer [customer_id]: " + str(type(customer_id))
+                )
+            # A WishList that already belongs to a customer cannot change owner
+            if self.customer_id is not None and customer_id != self.customer_id:
+                raise DataValidationError(
+                    "customer_id of a Wishlist cannot be changed"
                 )
             note = data.get("note")  # optional field
             if note is not None and not isinstance(note, str):
