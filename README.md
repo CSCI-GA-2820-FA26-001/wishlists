@@ -316,6 +316,45 @@ make test   # run the unit tests with coverage (must be at least 95%)
 make lint   # run flake8 and pylint
 ```
 
+### Browser acceptance tests
+
+Run from the repository root on a machine with Docker and Docker Compose v2:
+
+```bash
+make bdd
+```
+
+This builds a test-only image containing Python, Behave, Selenium, Chromium, and
+its matching driver, then starts a disposable application and PostgreSQL database.
+It waits for database and application health checks before running the browser.
+No local Python or browser installation is needed. Run it from the host terminal
+if Docker Compose is not available inside your Dev Container.
+
+Every invocation gets a separate Compose project, no host ports, and an in-memory
+PostgreSQL data directory. On success, failure, or interruption the command removes
+its containers and network. It does not use or clear your development database.
+The first build requires internet access and takes longer; later runs reuse layers.
+
+The scenarios create and retrieve a wishlist after refreshing, display duplicate
+and missing-record errors, and verify that user-provided HTML is rendered as text.
+These tests use real HTTP and PostgreSQL, with no skipped UI scenario.
+
+To run against an already-running **disposable test application**, install the
+locked development dependencies and a Chrome/Chromium browser, then use:
+
+```bash
+BDD_BASE_URL=http://localhost:8081 pipenv run behave
+```
+
+`CHROME_BINARY` and `CHROMEDRIVER` may specify installed executable paths; otherwise
+Selenium uses its normal discovery mechanism. This mode creates test wishlists but
+does not delete data. Configure that application's `DATABASE_URI` to a separate
+test database **before starting it**. The managed `make bdd` workflow is preferred
+because it handles isolation and cleanup automatically.
+
+CI runs the Python suite/lint and browser BDD as separate jobs. The BDD PR is stacked
+on the Admin UI branch; merge the UI first, then retarget the BDD PR to `master`.
+
 Run a single test file with:
 
 ```bash
