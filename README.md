@@ -14,7 +14,7 @@ The service is a Python [Flask](https://flask.palletsprojects.com/) app backed b
 - **Wishlist**: a named list that belongs to a customer
 - **Item**: a product saved in a wishlist (a subordinate resource under `/wishlists/<id>/items`)
 
-All requests and responses use JSON.
+The REST API uses JSON. The root URL (`/`) serves the browser-based Admin UI.
 
 ## Data Model
 
@@ -46,7 +46,7 @@ Deleting a wishlist also deletes all of its items.
 
 | Method   | URL                             | Description                    | Success          |
 | -------- | ------------------------------- | ------------------------------ | ---------------- |
-| `GET`    | `/`                             | Service information            | `200 OK`         |
+| `GET`    | `/`                             | Admin UI (HTML)                | `200 OK`         |
 | `GET`    | `/health`                       | Service health status          | `200 OK`         |
 | `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
 | `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
@@ -245,15 +245,9 @@ Errors: `400` if `product_id` is missing or not an integer, `quantity` is missin
 
 ### Root URL
 
-`GET /` returns information about the service:
-
-```json
-{
-  "name": "Wishlist Service",
-  "version": "1.0.0",
-  "wishlists_url": "/wishlists"
-}
-```
+`GET /` returns the HTML Admin UI for creating and retrieving wishlists.
+`/admin` remains an alias for the same page. This replaces the previous service
+metadata JSON response; the REST endpoints remain under `/wishlists`.
 
 ### Errors
 
@@ -298,7 +292,7 @@ curl -i -X POST http://localhost:8080/wishlists \
 
 ## Admin UI
 
-With the service running (`make run`), open `http://localhost:8080/admin`.
+With the service running (`make run`), open `http://localhost:8080/`.
 Create a wishlist using its name, customer ID, and optional note. The page shows
 its saved ID and details. To retrieve it later, enter that ID and select
 **Retrieve wishlist**. Refreshing the page clears the displayed details; retrieve
@@ -307,7 +301,7 @@ by ID again to read the saved data from PostgreSQL.
 The page displays API errors, including duplicate names and missing wishlist IDs.
 This initial UI supports creating and retrieving wishlist details only; item
 management and editing/deleting wishlists are not included. It adds no login or
-permissions system. The existing `/` JSON response and REST API remain unchanged.
+permissions system. The REST API remains unchanged under `/wishlists`.
 
 ## Testing
 
