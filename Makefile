@@ -106,3 +106,7 @@ remove:	## Stop and remove the buildx builder
 	$(info Stopping and removing the builder image...)
 	docker buildx stop
 	docker buildx rm
+
+.PHONY: bdd
+bdd: ## Run browser BDD with a disposable application and PostgreSQL database
+	sh scripts/bdd.sh

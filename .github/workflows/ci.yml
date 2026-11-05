@@ -10,6 +10,7 @@ on:
   pull_request:
     branches:
       - master
+      - feature/49-admin-ui
     paths-ignore:
       - "README.md"
       - ".vscode/**"
@@ -47,9 +48,9 @@ jobs:
 
       - name: Linting
         run: |
-          flake8 service tests --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 service tests --count --max-complexity=10 --max-line-length=127 --statistics
-          pylint service tests --max-line-length=127
+          flake8 service tests features --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 service tests features --count --max-complexity=10 --max-line-length=127 --statistics
+          pylint service tests features --max-line-length=127
 
       - name: Run unit tests with PyTest
         run: pytest --pspec --cov=service --cov-fail-under=95 --cov-report=xml --disable-warnings
@@ -64,3 +65,12 @@ jobs:
           slug: CSCI-GA-2820-FA26-001/wishlists
           files: ./coverage.xml
           fail_ci_if_error: false
+
+  bdd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run isolated browser acceptance tests
+        run: make bdd
