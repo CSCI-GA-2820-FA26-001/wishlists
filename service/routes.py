@@ -30,33 +30,17 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 # GET INDEX
 ######################################################################
-@app.route("/")
+@app.route("/admin", methods=["GET"])
+@app.route("/", methods=["GET"])
 def index():
-    """Return service information and the wishlist list URL as JSON"""
-    # Record requests for the service entry point required by story #8.
-    app.logger.info("Request for Wishlist service information")
-
-    # Use the initial service version and generate the resource URL from its existing endpoint.
-    response = jsonify(
-        name="Wishlist Service",
-        version="1.0.0",
-        wishlists_url=url_for("list_wishlists"),
-    )
-
-    # Log the successful response after constructing the service information.
-    app.logger.info("Returning Wishlist service information; 200 OK")
-    return response, status.HTTP_200_OK
+    """Serve the wishlist interface at the root and its existing admin alias."""
+    app.logger.info("Request for Wishlist administration")
+    return render_template("admin.html")
 
 
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
-
-
-@app.route("/admin", methods=["GET"])
-def admin():
-    """Serve the small wishlist administration interface."""
-    return render_template("admin.html")
 
 
 @app.route("/health", methods=["GET"])
