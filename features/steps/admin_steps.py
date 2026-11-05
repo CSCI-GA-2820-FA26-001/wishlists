@@ -34,7 +34,7 @@ def create(context, note="BDD sample"):
 @given("I am on the wishlist administration page")
 def open_admin(context):
     """Visit the actual application."""
-    context.browser.get(f"{context.base_url}/admin")
+    context.browser.get(f"{context.base_url}/")
     assert context.browser.title == "Wishlist administration"
 
 
