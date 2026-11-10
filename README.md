@@ -46,7 +46,7 @@ Deleting a wishlist also deletes all of its items.
 
 | Method   | URL                             | Description                    | Success          |
 | -------- | ------------------------------- | ------------------------------ | ---------------- |
-| `GET`    | `/`                             | Service information            | `200 OK`         |
+| `GET`    | `/`                             | Admin UI (HTML page)           | `200 OK`         |
 | `GET`    | `/health`                       | Service health status          | `200 OK`         |
 | `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
 | `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
@@ -243,17 +243,9 @@ Errors: `400` if `product_id` is missing or not an integer, `quantity` is missin
 
 `DELETE /wishlists/<id>/items/<item_id>` removes the item from the wishlist. The wishlist itself is kept. It returns `204 No Content` with an empty body, even if the item didn't exist, so deleting twice is safe. An item that belongs to a different wishlist is never deleted.
 
-### Root URL
+### Root URL (admin UI)
 
-`GET /` returns information about the service:
-
-```json
-{
-  "name": "Wishlist Service",
-  "version": "1.0.0",
-  "wishlists_url": "/wishlists"
-}
-```
+`GET /` serves a single-page admin UI for eCommerce managers. From it you can create, retrieve, update, and delete a wishlist, search wishlists by customer ID (a name typed in the form narrows the results), and clear all items from a wishlist. The page calls the REST API above, and its files live in `service/static/`.
 
 ### Errors
 
