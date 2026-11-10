@@ -273,7 +273,12 @@ Every error response is JSON with the same shape:
 1. Clone the repository and open the folder in VS Code.
 2. When prompted, choose **Reopen in Container** (or run **Dev Containers: Reopen in Container** from the Command Palette).
 
-The dev container includes Python 3.12, all dependencies, and a PostgreSQL database. Run the commands below in the VS Code terminal inside the container.
+The dev container uses `quay.io/rofrano/pipeline-selenium:sp26`, with Python 3.12,
+Chromium/ChromeDriver, Firefox/GeckoDriver, and the locked project dependencies.
+PostgreSQL runs alongside it. If you already opened this project in a container,
+run **Dev Containers: Rebuild Container** to apply the new image and packages.
+Reopening an old container alone does not update them. The first rebuild requires
+internet access. Run the commands below in the VS Code terminal inside the container.
 
 ### Start the service
 
@@ -322,7 +327,9 @@ This builds a test-only image containing Python, Behave, Selenium, Chromium, and
 its matching driver, then starts a disposable application and PostgreSQL database.
 It waits for database and application health checks before running the browser.
 No local Python or browser installation is needed. Run it from the host terminal
-if Docker Compose is not available inside your Dev Container.
+if Docker Compose is not available inside your Dev Container. This test-only image
+remains separate from the development container; `make bdd` does not rebuild or
+validate the development container itself.
 
 Every invocation gets a separate Compose project, no host ports, and an in-memory
 PostgreSQL data directory. On success, failure, or interruption the command removes
@@ -331,7 +338,8 @@ The first build requires internet access and takes longer; later runs reuse laye
 
 The scenarios create and retrieve a wishlist after refreshing, display duplicate
 and missing-record errors, and verify that user-provided HTML is rendered as text.
-These tests use real HTTP and PostgreSQL, with no skipped UI scenario.
+These tests use real HTTP and PostgreSQL, with no skipped UI scenario. The read-only
+setup scenario below also runs as part of `make bdd`.
 
 To run against an already-running **disposable test application**, install the
 locked development dependencies and a Chrome/Chromium browser, then use:
@@ -348,6 +356,55 @@ because it handles isolation and cleanup automatically.
 
 CI runs the Python suite/lint and browser BDD as separate jobs. The BDD PR is stacked
 on the Admin UI branch; merge the UI first, then retarget the BDD PR to `master`.
+
+### Professor-aligned devcontainer setup
+
+The professor's [project template](https://github.com/nyu-devops/project-template)
+is the starting point; its [Fall 2026 BDD lab](https://github.com/nyu-devops/lab-flask-bdd/tree/17456674f18e5352e2354bebd1f1dda569752ffe)
+provides the BDD-specific setup. This branch follows that lab's
+[Pipfile](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/Pipfile):
+Behave `~=1.3.3`, Selenium `==4.16.0`, requests `~=2.32.5`, and compare3 `~=1.0.4`.
+Selenium 4.16.0 is the lab's explicit pin, not 4.6.
+
+The development image is `quay.io/rofrano/pipeline-selenium:sp26`, as used by the
+lab's [BDD workflow](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/.github/workflows/bdd-tests.yml).
+The lab's own devcontainer uses the same `sp26` tag from Docker Hub. Cucumber
+autocomplete is already enabled in `devcontainer.json`.
+
+1. Open this working copy in VS Code and run **Dev Containers: Rebuild Container**.
+   Reopening an old container does not apply the new base image or dependencies.
+2. In the rebuilt container, run `make run` to start the service.
+3. In a second terminal in the same container, run `behave --tags=@setup --no-capture`.
+
+The setup scenario opens `/health` in a real headless browser and checks its JSON
+response. It does not create, change, or delete application data. The browser
+closes after the run, including when a scenario or browser configuration fails.
+
+The hooks follow the lab's [browser environment](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/features/environment.py):
+`BASE_URL` defaults to `http://localhost:8080`, `DRIVER` to `chrome`, and
+`WAIT_SECONDS` to `30`. The devcontainer sets `WAIT_SECONDS=5`, matching the lab.
+Steps can use `context.driver`, `context.base_url`, and `context.wait_seconds`.
+Existing admin steps keep working through the `context.browser` alias.
+`BDD_BASE_URL` remains supported for the isolated runner and older commands;
+`BASE_URL` takes precedence when both are set.
+To override the defaults or use the bundled Firefox alternative:
+
+```bash
+BASE_URL=http://localhost:8081 WAIT_SECONDS=20 behave --tags=@setup
+DRIVER=firefox behave --tags=@setup
+```
+
+Both hooks explicitly use the bundled drivers and register cleanup immediately
+after launch. Firefox's JSON viewer is disabled so the smoke test can read the
+unchanged health response. Outside the container, install the
+locked dependencies with `pipenv sync --dev` and provide a compatible browser
+before running `pipenv run behave --tags=@setup`.
+
+Use `--tags=@setup` for read-only browser checks. Unfiltered `behave` also
+runs the existing Admin UI scenarios, which create data and require a disposable
+test application and database. The existing scenarios, `make bdd` runner, UI,
+and CI jobs are retained by this setup update. Their scope and the PR base are
+unchanged.
 
 Run a single test file with:
 

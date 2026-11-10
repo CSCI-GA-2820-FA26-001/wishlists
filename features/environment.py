@@ -1,22 +1,46 @@
-"""Browser lifecycle for the isolated BDD environment."""
-# pylint: disable=not-callable  # Third-party lazy exports are resolved at runtime.
+"""Browser hooks adapted from the professor's Fall 2026 lab-flask-bdd."""
+# pylint: disable=not-callable  # Selenium resolves these exports at runtime.
 import os
+from shutil import which
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.firefox.service import Service as FirefoxService
 
 
 def before_all(context):
-    """Use a configurable URL and a locally installed Chromium/Chrome driver."""
-    context.base_url = os.getenv("BDD_BASE_URL", "http://wishlist:8080").rstrip("/")
+    """Expose the same context and environment settings as the course BDD lab."""
+    context.base_url = os.getenv("BASE_URL", os.getenv("BDD_BASE_URL", "http://localhost:8080")).rstrip("/")
+    context.wait_seconds = int(os.getenv("WAIT_SECONDS", "30"))
+    driver = os.getenv("DRIVER", "chrome").lower()
+    context.driver = get_firefox() if "firefox" in driver else get_chrome()
+    context.add_cleanup(context.driver.quit)
+    context.browser = context.driver  # Preserve the existing admin step interface.
+    context.driver.implicitly_wait(context.wait_seconds)
+    context.driver.set_window_size(1280, 1300)
+    context.driver.set_page_load_timeout(context.wait_seconds)
+    context.config.setup_logging()
+
+
+def get_chrome():
+    """Create headless Chrome using the image's installed browser and driver."""
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")  # Chromium runs inside the disposable test container.
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1280,900")
     if os.getenv("CHROME_BINARY"):
         options.binary_location = os.environ["CHROME_BINARY"]
     driver_path = os.getenv("CHROMEDRIVER")
-    service = Service(executable_path=driver_path) if driver_path else Service()
-    context.browser = webdriver.Chrome(service=service, options=options)
-    context.browser.set_page_load_timeout(20)
-    context.add_cleanup(context.browser.quit)
+    service = ChromeService(executable_path=driver_path) if driver_path else ChromeService()
+    return webdriver.Chrome(service=service, options=options)
+
+
+def get_firefox():
+    """Create the headless Firefox alternative provided by the course image."""
+    options = webdriver.FirefoxOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    # Read the health endpoint as JSON rather than Firefox's developer viewer.
+    options.set_preference("devtools.jsonview.enabled", False)
+    service = FirefoxService(executable_path=which("geckodriver"))
+    return webdriver.Firefox(service=service, options=options)
