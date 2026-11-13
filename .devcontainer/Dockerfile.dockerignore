@@ -1,0 +1,9 @@
+# Keep devcontainer inputs available without changing production build rules.
+**
+!Pipfile
+!Pipfile.lock
+!.devcontainer/
+!.devcontainer/scripts/
+!.devcontainer/scripts/install-tools.sh
+!config/
+!config/insecure-registry.json

@@ -1,5 +1,7 @@
-# Image for a NYU Lab development environment
-FROM rofrano/nyu-devops-base:fa26
+# Selenium image used by the professor's Fall 2026 BDD workflow.
+FROM quay.io/rofrano/pipeline-selenium:sp26
+
+ENV CHROME_BINARY=/usr/bin/chromium CHROMEDRIVER=/usr/bin/chromedriver
 
 ARG USERNAME=vscode
 USER root
@@ -7,8 +9,8 @@ USER root
 # Set up the Python development environment
 WORKDIR /app
 COPY Pipfile Pipfile.lock ./
-RUN python -m pip install --upgrade pip pipenv && \
-    pipenv install --system --dev
+# The Selenium base already includes Pipenv; install only the locked packages.
+RUN pipenv sync --system --dev
 
 # Configuring insecure Docker registry
 COPY config/insecure-registry.json /etc/docker/daemon.json 
