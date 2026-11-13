@@ -2,6 +2,7 @@
 .git
 .github
 .devcontainer
+!.devcontainer/scripts/install-tools.sh
 .vscode
 .coverage
 .pytest_cache
@@ -10,4 +11,5 @@
 k8s
 tests
 config
+!config/insecure-registry.json
 .env

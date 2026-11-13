@@ -339,6 +339,53 @@ Remove the cluster with `make cluster-rm`. If `make push` fails with `no such ho
 sudo bash -c "echo '127.0.0.1    cluster-registry' >> /etc/hosts"
 ```
 
+## Browser test environment (issue #50)
+
+The professor's [project template](https://github.com/nyu-devops/project-template)
+is the starting point; its [Fall 2026 BDD lab](https://github.com/nyu-devops/lab-flask-bdd/tree/17456674f18e5352e2354bebd1f1dda569752ffe)
+provides the BDD-specific setup. This branch follows that lab's
+[Pipfile](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/Pipfile):
+Behave `~=1.3.3`, Selenium `==4.16.0`, requests `~=2.32.5`, and compare3 `~=1.0.4`.
+Selenium 4.16.0 is the lab's explicit pin, not 4.6.
+
+The development image is `quay.io/rofrano/pipeline-selenium:sp26`, as used by the
+lab's [BDD workflow](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/.github/workflows/bdd-tests.yml).
+The lab's own devcontainer uses the same `sp26` tag from Docker Hub. Cucumber
+autocomplete is already enabled in `devcontainer.json`.
+
+1. Open this working copy in VS Code and run **Dev Containers: Rebuild Container**.
+   Reopening an old container does not apply the new base image or dependencies.
+2. In the rebuilt container, run `make run` and wait for the service to start.
+3. In a second terminal in the same container, run `behave --tags=@setup --no-capture`.
+
+Expect one passing scenario. Selenium opens the running Wishlist home page at
+`http://localhost:8080/` and checks that its title contains `Wishlist Admin`.
+The browser closes after the run, including when a scenario or browser configuration fails.
+
+The hooks follow the lab's [browser environment](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/features/environment.py):
+`BASE_URL` defaults to `http://localhost:8080`, `DRIVER` to `chrome`, and
+`WAIT_SECONDS` to `30`. The devcontainer sets `WAIT_SECONDS=5`, matching the lab.
+Steps use `context.driver`, `context.base_url`, and `context.wait_seconds`.
+To override the defaults or use the bundled Firefox alternative:
+
+```bash
+WAIT_SECONDS=20 behave --tags=@setup
+DRIVER=firefox behave --tags=@setup
+```
+
+The hooks register browser cleanup immediately after launch. Outside the container,
+install the locked dependencies with `pipenv sync --dev` and provide a compatible
+browser and driver before running `pipenv run behave --tags=@setup`.
+
+Create and Retrieve browser scenarios belong in their respective UI stories.
+Reuse `features/steps/web_steps.py` for browser actions and UI assertions. For
+scenarios that need existing wishlists, add `Given the following wishlists` to
+the `Background` with `name` and `customer_id` columns and an optional `note`.
+Like the lab, this step deletes all existing wishlists and then creates the
+table's rows through the REST API, so every scenario starts from the same data.
+Run Behave against a test or development instance, never a database with real data. Perform scenario actions and assertions through Selenium and
+the Admin UI. The Tekton BDD task will run the feature scenarios after deployment.
+
 ## Project Structure
 
 ```text
