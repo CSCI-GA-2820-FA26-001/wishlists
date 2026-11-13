@@ -381,9 +381,9 @@ Create and Retrieve browser scenarios belong in their respective UI stories.
 Reuse `features/steps/web_steps.py` for browser actions and UI assertions. For
 scenarios that need existing wishlists, add `Given the following wishlists` to
 the `Background` with `name` and `customer_id` columns and an optional `note`.
-This step prepares data through the REST API and removes the wishlists it created
-after each scenario. Run scenarios that create data against a test instance with
-its own database. Perform scenario actions and assertions through Selenium and
+Like the lab, this step deletes all existing wishlists and then creates the
+table's rows through the REST API, so every scenario starts from the same data.
+Run Behave against a test or development instance, never a database with real data. Perform scenario actions and assertions through Selenium and
 the Admin UI. The Tekton BDD task will run the feature scenarios after deployment.
 
 ## Project Structure
