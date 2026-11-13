@@ -356,11 +356,10 @@ autocomplete is already enabled in `devcontainer.json`.
 1. Open this working copy in VS Code and run **Dev Containers: Rebuild Container**.
    Reopening an old container does not apply the new base image or dependencies.
 2. In the rebuilt container, run `make run` and wait for the service to start.
-   Open `http://localhost:8080/` to confirm the running service responds.
 3. In a second terminal in the same container, run `behave --tags=@setup --no-capture`.
 
-Expect one passing scenario. Selenium opens the local HTML fixture at
-`features/fixtures/setup.html` and checks the title `Wishlist BDD Smoke Test`.
+Expect one passing scenario. Selenium opens the running Wishlist home page at
+`http://localhost:8080/` and checks that its title contains `Wishlist Admin`.
 The browser closes after the run, including when a scenario or browser configuration fails.
 
 The hooks follow the lab's [browser environment](https://github.com/nyu-devops/lab-flask-bdd/blob/17456674f18e5352e2354bebd1f1dda569752ffe/features/environment.py):
@@ -378,9 +377,14 @@ The hooks register browser cleanup immediately after launch. Outside the contain
 install the locked dependencies with `pipenv sync --dev` and provide a compatible
 browser and driver before running `pipenv run behave --tags=@setup`.
 
-Create and Retrieve browser scenarios belong in their respective UI stories. Set
-up test data through the UI in those scenarios. The Tekton BDD task will run the
-feature scenarios after deployment.
+Create and Retrieve browser scenarios belong in their respective UI stories.
+Reuse `features/steps/web_steps.py` for browser actions and UI assertions. For
+scenarios that need existing wishlists, add `Given the following wishlists` to
+the `Background` with `name` and `customer_id` columns and an optional `note`.
+This step prepares data through the REST API and removes the wishlists it created
+after each scenario. Run scenarios that create data against a test instance with
+its own database. Perform scenario actions and assertions through Selenium and
+the Admin UI. The Tekton BDD task will run the feature scenarios after deployment.
 
 ## Project Structure
 

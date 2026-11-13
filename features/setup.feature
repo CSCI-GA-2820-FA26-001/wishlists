@@ -4,6 +4,6 @@ Feature: Browser test environment
   I need a working browser test environment
   So that teammates can add their own acceptance scenarios
 
-  Scenario: Open a local test page in a real browser
-    When I open the local BDD test page
-    Then the browser title is "Wishlist BDD Smoke Test"
+  Scenario: Open the running Wishlist Admin home page
+    When I visit the "Home Page"
+    Then I should see "Wishlist Admin" in the title
