@@ -7,6 +7,8 @@ Feature: Manage wishlists through the Admin UI
     Given the following wishlists
       | name     | customer_id |
       | Birthday | 1001        |
+      | Holiday  | 1001        |
+      | Books    | 2002        |
 
   Scenario: Create a wishlist
     When I visit the "Home Page"
@@ -22,3 +24,11 @@ Feature: Manage wishlists through the Admin UI
     Then I should see the message "Success"
     And I should see "Wedding" in the "Name" field
     And I should see "3003" in the "Customer ID" field
+
+  Scenario: List all wishlists
+    When I visit the "Home Page"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Birthday" in the results
+    And I should see "Holiday" in the results
+    And I should see "Books" in the results
