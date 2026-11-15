@@ -32,7 +32,8 @@ Feature: Manage wishlists through the Admin UI
     Then I should see the message "Success"
     When I copy the "ID" field
     And I press the "Clear" button
-    And I paste the "ID" field
+    Then the "Name" field should be empty
+    When I paste the "ID" field
     And I press the "Retrieve" button
     Then I should see the message "Success"
     And I should see "Birthday" in the "Name" field
