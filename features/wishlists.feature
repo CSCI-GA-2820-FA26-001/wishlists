@@ -5,10 +5,10 @@ Feature: Manage wishlists through the Admin UI
 
   Background:
     Given the following wishlists
-      | name     | customer_id |
-      | Birthday | 1001        |
-      | Holiday  | 1001        |
-      | Books    | 2002        |
+      | name     | customer_id | note        |
+      | Birthday | 1001        | Gift ideas  |
+      | Holiday  | 1001        | Winter trip |
+      | Books    | 2002        | Reading     |
 
   Scenario: Create a wishlist
     When I visit the "Home Page"
@@ -32,3 +32,18 @@ Feature: Manage wishlists through the Admin UI
     And I should see "Birthday" in the results
     And I should see "Holiday" in the results
     And I should see "Books" in the results
+
+  Scenario: Retrieve a wishlist
+    When I visit the "Home Page"
+    And I set the "Name" to "Birthday"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    When I copy the "ID" field
+    And I press the "Clear" button
+    Then the "Name" field should be empty
+    When I paste the "ID" field
+    And I press the "Retrieve" button
+    Then I should see the message "Success"
+    And I should see "Birthday" in the "Name" field
+    And I should see "1001" in the "Customer ID" field
+    And I should see "Gift ideas" in the "Note" field
