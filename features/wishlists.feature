@@ -56,3 +56,14 @@ Feature: Manage wishlists through the Admin UI
     And I should see "Birthday" in the results
     And I should see "Holiday" in the results
     And I should not see "Books" in the results
+
+  Scenario: Update a wishlist
+    When I visit the "Home Page"
+    And I set the "Name" to "Birthday"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    When I change "Note" to "Party supplies"
+    And I press the "Update" button
+    Then I should see the message "Success"
+    When I press the "Search" button
+    Then I should see "Party supplies" in the results
