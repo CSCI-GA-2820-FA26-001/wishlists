@@ -25,6 +25,14 @@ Feature: Manage wishlists through the Admin UI
     And I should see "Wedding" in the "Name" field
     And I should see "3003" in the "Customer ID" field
 
+  Scenario: List all wishlists
+    When I visit the "Home Page"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Birthday" in the results
+    And I should see "Holiday" in the results
+    And I should see "Books" in the results
+
   Scenario: Retrieve a wishlist
     When I visit the "Home Page"
     And I set the "Name" to "Birthday"
