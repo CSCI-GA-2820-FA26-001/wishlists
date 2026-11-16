@@ -62,6 +62,13 @@ def check_field_empty(context, element_name):
     assert context.driver.find_element(By.ID, field_id(element_name)).get_attribute("value") == ""
 
 
+@then('the "{element_name}" field should be "{expected_value}"')
+def check_exact_field_value(context, element_name, expected_value):
+    """Check the whole value displayed in a form field."""
+    actual_value = context.driver.find_element(By.ID, field_id(element_name)).get_attribute("value")
+    assert actual_value == expected_value, f"Expected {element_name} to be {expected_value!r}, got {actual_value!r}"
+
+
 @when('I copy the "{element_name}" field')
 def copy_field(context, element_name):
     """Save a field's value for another step in the scenario."""

@@ -25,6 +25,28 @@ Feature: Manage wishlists through the Admin UI
     And I should see "Wedding" in the "Name" field
     And I should see "3003" in the "Customer ID" field
 
+  Scenario: Clear all items from a wishlist
+    Given the "Birthday" wishlist for customer 1001 has the following items
+      | product_id | quantity |
+      | 101        | 1        |
+      | 102        | 3        |
+    When I visit the "Home Page"
+    And I set the "Name" to "Birthday"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And the "Name" field should be "Birthday"
+    And the "Item Count" field should be "2"
+    When I copy the "ID" field
+    And I press the "Clear Items" button
+    Then I should see the message "Success"
+    And the "Item Count" field should be "0"
+    When I press the "Clear" button
+    And I paste the "ID" field
+    And I press the "Retrieve" button
+    Then I should see the message "Success"
+    And the "Name" field should be "Birthday"
+    And the "Item Count" field should be "0"
+
   Scenario: List all wishlists
     When I visit the "Home Page"
     And I press the "Search" button
