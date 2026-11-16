@@ -47,3 +47,12 @@ Feature: Manage wishlists through the Admin UI
     And I should see "Birthday" in the "Name" field
     And I should see "1001" in the "Customer ID" field
     And I should see "Gift ideas" in the "Note" field
+
+  Scenario: Search wishlists by customer
+    When I visit the "Home Page"
+    And I set the "Customer ID" to "1001"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Birthday" in the results
+    And I should see "Holiday" in the results
+    And I should not see "Books" in the results
