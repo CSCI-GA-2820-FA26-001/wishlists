@@ -89,3 +89,21 @@ Feature: Manage wishlists through the Admin UI
     Then I should see the message "Success"
     When I press the "Search" button
     Then I should see "Party supplies" in the results
+
+  Scenario: Delete a wishlist
+    When I visit the "Home Page"
+    And I set the "Name" to "Books"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Books" in the results
+    When I copy the "ID" field
+    And I press the "Clear" button
+    And I paste the "ID" field
+    And I press the "Delete" button
+    Then I should see the message "Wishlist has been Deleted!"
+    When I press the "Clear" button
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Birthday" in the results
+    And I should see "Holiday" in the results
+    And I should not see "Books" in the results
