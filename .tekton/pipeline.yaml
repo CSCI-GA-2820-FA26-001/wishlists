@@ -1,0 +1,42 @@
+# CD pipeline for the Wishlists service.
+# Each team member adds their own task below (lint, test, build, deploy, BDD).
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: cd-pipeline
+spec:
+  description: Clones the wishlists repo into a shared workspace for the tasks that follow
+  workspaces:
+    - name: pipeline-workspace
+      description: Shared PVC (see .tekton/workspace.yaml) that holds the cloned source
+  params:
+    - name: GIT_REPO
+      type: string
+      description: URL of the git repository to clone
+    - name: GIT_REF
+      type: string
+      description: Branch, tag, or commit to check out
+      default: master
+  tasks:
+    - name: clone
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines
+      workspaces:
+        - name: output
+          workspace: pipeline-workspace
+      params:
+        - name: URL
+          value: $(params.GIT_REPO)
+        - name: REVISION
+          value: $(params.GIT_REF)
+        - name: SUBDIRECTORY
+          value: ""
+        - name: DELETE_EXISTING
+          value: "true"

@@ -1,0 +1,14 @@
+# Shared workspace for the CD pipeline.
+# Every task in .tekton/pipeline.yaml mounts this claim, so the source
+# cloned by the first task is available to all later tasks.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pipeline-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem
