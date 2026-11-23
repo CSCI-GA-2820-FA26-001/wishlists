@@ -406,7 +406,7 @@ tkn pipeline start cd-pipeline \
   --showlog
 ```
 
-Add `-p GIT_REF=<branch>` to clone a different branch. The `clone` task uses the `git-clone` Task that OpenShift Pipelines installs in the `openshift-pipelines` namespace, so it doesn't need to be added to `tasks.yaml`.
+Add `-p GIT_REF=<branch>` to clone a different branch. The `clone` task uses the `git-clone` Task that OpenShift Pipelines installs in the `openshift-pipelines` namespace.
 
 ## Project Structure
 
