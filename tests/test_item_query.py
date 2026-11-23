@@ -9,7 +9,7 @@ from tests.factories import WishListFactory, ItemFactory
 
 # pylint: disable=duplicate-code
 
-BASE_URL = "/wishlists"
+BASE_URL = "/api/wishlists"
 
 
 class TestItemQueryService(TestCase):

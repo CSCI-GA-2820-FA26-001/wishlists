@@ -64,7 +64,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "POST",
-            url: "/wishlists",
+            url: "/api/wishlists",
             contentType: "application/json",
             data: JSON.stringify(form_payload()),
         });
@@ -92,7 +92,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "PUT",
-            url: `/wishlists/${wishlist_id}`,
+            url: `/api/wishlists/${wishlist_id}`,
             contentType: "application/json",
             data: JSON.stringify(form_payload())
         })
@@ -120,7 +120,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "GET",
-            url: `/wishlists/${wishlist_id}`,
+            url: `/api/wishlists/${wishlist_id}`,
             contentType: "application/json",
             data: ''
         })
@@ -149,7 +149,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/wishlists/${wishlist_id}`,
+            url: `/api/wishlists/${wishlist_id}`,
             contentType: "application/json",
             data: '',
         })
@@ -176,7 +176,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "PUT",
-            url: `/wishlists/${wishlist_id}/clear`,
+            url: `/api/wishlists/${wishlist_id}/clear`,
             contentType: "application/json",
             data: ''
         })
@@ -221,7 +221,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "GET",
-            url: `/wishlists?${queryString}`,
+            url: `/api/wishlists?${queryString}`,
             contentType: "application/json",
             data: ''
         })

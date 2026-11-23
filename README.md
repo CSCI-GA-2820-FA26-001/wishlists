@@ -12,7 +12,7 @@ A RESTful microservice for managing customer wishlists. A customer can have many
 The service is a Python [Flask](https://flask.palletsprojects.com/) app backed by PostgreSQL through [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/). It has two resources:
 
 - **Wishlist**: a named list that belongs to a customer
-- **Item**: a product saved in a wishlist (a subordinate resource under `/wishlists/<id>/items`)
+- **Item**: a product saved in a wishlist (a subordinate resource under `/api/wishlists/<id>/items`)
 
 All requests and responses use JSON.
 
@@ -44,21 +44,23 @@ Deleting a wishlist also deletes all of its items.
 
 ## API Endpoints
 
-| Method   | URL                             | Description                    | Success          |
-| -------- | ------------------------------- | ------------------------------ | ---------------- |
-| `GET`    | `/`                             | Admin UI (HTML page)           | `200 OK`         |
-| `GET`    | `/health`                       | Service health status          | `200 OK`         |
-| `POST`   | `/wishlists`                    | Create a wishlist              | `201 Created`    |
-| `GET`    | `/wishlists`                    | List or filter wishlists       | `200 OK`         |
-| `GET`    | `/wishlists/<id>`               | Read a wishlist and its items  | `200 OK`         |
-| `PUT`    | `/wishlists/<id>`               | Update a wishlist              | `200 OK`         |
-| `PUT`    | `/wishlists/<id>/clear`         | Clear all items from a wishlist | `200 OK`        |
-| `DELETE` | `/wishlists/<id>`               | Delete a wishlist and its items | `204 No Content` |
-| `POST`   | `/wishlists/<id>/items`         | Add a product to a wishlist    | `201 Created`    |
-| `GET`    | `/wishlists/<id>/items`         | List or filter the products in a wishlist | `200 OK` |
-| `GET`    | `/wishlists/<id>/items/<item_id>` | Read a product in a wishlist | `200 OK`         |
-| `PUT`    | `/wishlists/<id>/items/<item_id>` | Update a product in a wishlist | `200 OK`       |
-| `DELETE` | `/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist | `204 No Content` |
+The REST API is served by [Flask-RESTX](https://flask-restx.readthedocs.io/) under the `/api` prefix. The admin UI (`/`) and the health check (`/health`) are outside it.
+
+| Method   | URL                                   | Description                               | Success          |
+| -------- | ------------------------------------- | ----------------------------------------- | ---------------- |
+| `GET`    | `/`                                   | Admin UI (HTML page)                      | `200 OK`         |
+| `GET`    | `/health`                             | Service health status                     | `200 OK`         |
+| `POST`   | `/api/wishlists`                      | Create a wishlist                         | `201 Created`    |
+| `GET`    | `/api/wishlists`                      | List or filter wishlists                  | `200 OK`         |
+| `GET`    | `/api/wishlists/<id>`                 | Read a wishlist and its items             | `200 OK`         |
+| `PUT`    | `/api/wishlists/<id>`                 | Update a wishlist                         | `200 OK`         |
+| `PUT`    | `/api/wishlists/<id>/clear`           | Clear all items from a wishlist           | `200 OK`         |
+| `DELETE` | `/api/wishlists/<id>`                 | Delete a wishlist and its items           | `204 No Content` |
+| `POST`   | `/api/wishlists/<id>/items`           | Add a product to a wishlist               | `201 Created`    |
+| `GET`    | `/api/wishlists/<id>/items`           | List or filter the products in a wishlist | `200 OK`         |
+| `GET`    | `/api/wishlists/<id>/items/<item_id>` | Read a product in a wishlist              | `200 OK`         |
+| `PUT`    | `/api/wishlists/<id>/items/<item_id>` | Update a product in a wishlist            | `200 OK`         |
+| `DELETE` | `/api/wishlists/<id>/items/<item_id>` | Delete a product from a wishlist          | `204 No Content` |
 
 ### Health check
 
@@ -67,7 +69,7 @@ Deleting a wishlist also deletes all of its items.
 ### Create a wishlist
 
 ```http
-POST /wishlists
+POST /api/wishlists
 Content-Type: application/json
 
 {
@@ -89,18 +91,18 @@ Response `201 Created`:
 }
 ```
 
-The response also includes a `Location` header with the new wishlist's URL, for example `Location: http://localhost:8080/wishlists/1`.
+The response also includes a `Location` header with the new wishlist's URL, for example `Location: http://localhost:8080/api/wishlists/1`.
 
 Errors: `400` if `name` or `customer_id` is missing or the wrong type, `409` if the customer already has a wishlist with that name, `415` if the body isn't JSON.
 
 ### List wishlists
 
-`GET /wishlists` returns a JSON array of every wishlist, each with its items. It returns `[]` when there are none.
+`GET /api/wishlists` returns a JSON array of every wishlist, each with its items. It returns `[]` when there are none.
 
 To list the wishlists belonging to one customer, supply a `customer_id` query parameter:
 
 ```http
-GET /wishlists?customer_id=1001
+GET /api/wishlists?customer_id=1001
 ```
 
 The response is `200 OK` with a JSON array of only that customer's wishlists, including their items.
@@ -113,12 +115,12 @@ Filtering does not change any stored wishlists or items.
 
 ### Read a wishlist
 
-`GET /wishlists/<id>` returns the wishlist with its items. Returns `404` if the wishlist doesn't exist.
+`GET /api/wishlists/<id>` returns the wishlist with its items. Returns `404` if the wishlist doesn't exist.
 
 ### Update a wishlist
 
 ```http
-PUT /wishlists/1
+PUT /api/wishlists/1
 Content-Type: application/json
 
 {
@@ -135,7 +137,7 @@ Errors: `400` for missing or invalid fields, or if `customer_id` is different fr
 ### Clear all items from a wishlist
 
 ```http
-PUT /wishlists/1/clear
+PUT /api/wishlists/1/clear
 ```
 
 No request body is required. This removes only the items in the selected wishlist, keeping the wishlist and its existing `id`, `name`, `customer_id`, and `note` unchanged. Other wishlists and their items are not affected.
@@ -158,12 +160,12 @@ Errors: `404` with a JSON error response if the wishlist doesn't exist.
 
 ### Delete a wishlist
 
-`DELETE /wishlists/<id>` deletes the wishlist and all of its items. It returns `204 No Content` with an empty body, even if the wishlist didn't exist.
+`DELETE /api/wishlists/<id>` deletes the wishlist and all of its items. It returns `204 No Content` with an empty body, even if the wishlist didn't exist.
 
 ### Add a product to a wishlist
 
 ```http
-POST /wishlists/1/items
+POST /api/wishlists/1/items
 Content-Type: application/json
 
 {
@@ -191,12 +193,12 @@ Errors: `400` if the body isn't a JSON object, `product_id` is missing or not an
 
 ### List the products in a wishlist
 
-`GET /wishlists/<id>/items` returns a JSON array of the wishlist's items, sorted by item `id`. It returns `[]` when the wishlist has no items, and `404` if the wishlist doesn't exist.
+`GET /api/wishlists/<id>/items` returns a JSON array of the wishlist's items, sorted by item `id`. It returns `[]` when the wishlist has no items, and `404` if the wishlist doesn't exist.
 
 To check whether a product is already saved in a wishlist, supply a `product_id` query parameter:
 
 ```http
-GET /wishlists/1/items?product_id=2001
+GET /api/wishlists/1/items?product_id=2001
 ```
 
 The response is `200 OK` with a JSON array of only the items for that product in this wishlist, sorted by item `id`.
@@ -208,12 +210,12 @@ Requests without a `product_id` filter continue to return all items in the wishl
 
 ### Read a product in a wishlist
 
-`GET /wishlists/<id>/items/<item_id>` returns a single item as JSON. Returns `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist.
+`GET /api/wishlists/<id>/items/<item_id>` returns a single item as JSON. Returns `404` if the wishlist doesn't exist, if the item doesn't exist, or if the item belongs to a different wishlist.
 
 ### Update a product in a wishlist
 
 ```http
-PUT /wishlists/1/items/1
+PUT /api/wishlists/1/items/1
 Content-Type: application/json
 
 {
@@ -241,7 +243,7 @@ Errors: `400` if `product_id` is missing or not an integer, `quantity` is missin
 
 ### Delete a product from a wishlist
 
-`DELETE /wishlists/<id>/items/<item_id>` removes the item from the wishlist. The wishlist itself is kept. It returns `204 No Content` with an empty body, even if the item didn't exist, so deleting twice is safe. An item that belongs to a different wishlist is never deleted.
+`DELETE /api/wishlists/<id>/items/<item_id>` removes the item from the wishlist. The wishlist itself is kept. It returns `204 No Content` with an empty body, even if the item didn't exist, so deleting twice is safe. An item that belongs to a different wishlist is never deleted.
 
 ### Root URL (admin UI)
 
@@ -282,8 +284,8 @@ make run
 `make run` runs `honcho start`, which starts the service with gunicorn using the `Procfile`. The service listens on port `8080`. Try it out:
 
 ```bash
-curl -i http://localhost:8080/wishlists
-curl -i -X POST http://localhost:8080/wishlists \
+curl -i http://localhost:8080/api/wishlists
+curl -i -X POST http://localhost:8080/api/wishlists \
   -H "Content-Type: application/json" \
   -d '{"name": "Birthday", "customer_id": 1001}'
 ```

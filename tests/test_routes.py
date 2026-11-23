@@ -30,7 +30,7 @@ from tests.factories import WishListFactory, ItemFactory
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
-BASE_URL = "/wishlists"
+BASE_URL = "/api/wishlists"
 
 # Payloads with every required field present but one field of the wrong type
 INVALID_TYPE_PAYLOADS = [
@@ -92,7 +92,7 @@ class TestYourResourceService(TestCase):
         """It should serve the admin UI JavaScript"""
         resp = self.client.get("/static/js/rest_api.js")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertIn(b"/wishlists", resp.data)
+        self.assertIn(b"/api/wishlists", resp.data)
         resp.close()
 
     def test_health(self):
@@ -102,6 +102,22 @@ class TestYourResourceService(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.content_type, "application/json")
         self.assertEqual(response.get_json(), {"status": "OK"})
+
+    def test_old_urls_are_not_the_api(self):
+        """It should not serve the REST API outside the /api prefix"""
+        response = self.client.get("/wishlists")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.get_json()["error"], "Not Found")
+
+    def test_api_method_not_allowed(self):
+        """It should return JSON 405 for an unsupported method on an /api route"""
+        response = self.client.delete(BASE_URL)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.content_type, "application/json")
+        data = response.get_json()
+        self.assertEqual(data["status"], status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(data["error"], "Method not Allowed")
 
     ######################################################################
     #  D E L E T E   A   W I S H L I S T
@@ -113,7 +129,7 @@ class TestYourResourceService(TestCase):
         wishlist.create()
         wishlist_id = wishlist.id
 
-        response = self.client.delete(f"/wishlists/{wishlist_id}")
+        response = self.client.delete(f"/api/wishlists/{wishlist_id}")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, b"")
 
@@ -122,7 +138,7 @@ class TestYourResourceService(TestCase):
 
     def test_delete_wishlist_not_found(self):
         """It should return 204 No Content when the Wishlist does not exist"""
-        response = self.client.delete("/wishlists/0")
+        response = self.client.delete("/api/wishlists/0")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, b"")
 
@@ -146,7 +162,7 @@ class TestYourResourceService(TestCase):
         wishlist_id, item_id = wishlist.id, item.id
         other_wishlist_id, other_item_id = other_wishlist.id, other_item.id
 
-        response = self.client.delete(f"/wishlists/{wishlist_id}")
+        response = self.client.delete(f"/api/wishlists/{wishlist_id}")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, b"")
 
@@ -163,7 +179,7 @@ class TestYourResourceService(TestCase):
             "name": "Birthday",
             "customer_id": 1001,
         }
-        response = self.client.post("/wishlists", json=payload)
+        response = self.client.post("/api/wishlists", json=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.get_json()
         self.assertEqual(data["name"], "Birthday")
@@ -186,9 +202,9 @@ class TestYourResourceService(TestCase):
             "name": "Birthday",
             "customer_id": 1001,
         }
-        response = self.client.post("/wishlists", json=payload)
+        response = self.client.post("/api/wishlists", json=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        response = self.client.post("/wishlists", json=payload)
+        response = self.client.post("/api/wishlists", json=payload)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         data = response.get_json()
         self.assertIsNotNone(data)
@@ -205,9 +221,9 @@ class TestYourResourceService(TestCase):
             "name": "Birthday",
             "customer_id": 1002,
         }
-        response = self.client.post("/wishlists", json=first)
+        response = self.client.post("/api/wishlists", json=first)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        response = self.client.post("/wishlists", json=second)
+        response = self.client.post("/api/wishlists", json=second)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(WishList.all()), 2)
 
@@ -219,7 +235,7 @@ class TestYourResourceService(TestCase):
         ]
         for payload in invalid_payloads:
             with self.subTest(payload=payload):
-                response = self.client.post("/wishlists", json=payload)
+                response = self.client.post("/api/wishlists", json=payload)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(len(WishList.all()), 0)
 
@@ -227,7 +243,7 @@ class TestYourResourceService(TestCase):
         """It should reject a Wishlist with fields of the wrong type"""
         for payload in INVALID_TYPE_PAYLOADS:
             with self.subTest(payload=payload):
-                response = self.client.post("/wishlists", json=payload)
+                response = self.client.post("/api/wishlists", json=payload)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 data = response.get_json()
                 self.assertIsNotNone(data)
@@ -237,7 +253,7 @@ class TestYourResourceService(TestCase):
     def test_create_wishlist_requires_json(self):
         """It should reject a Wishlist request that is not JSON"""
         response = self.client.post(
-            "/wishlists",
+            "/api/wishlists",
             data="name=Birthday&customer_id=1001",
             content_type="text/plain",
         )
@@ -266,7 +282,7 @@ class TestYourResourceService(TestCase):
         other_original = other_item.serialize()
 
         # Address the Item record ID in the URL, rather than its product_id.
-        response = self.client.delete(f"/wishlists/{wishlist_id}/items/{item_id}")
+        response = self.client.delete(f"/api/wishlists/{wishlist_id}/items/{item_id}")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, b"")
 
@@ -302,8 +318,8 @@ class TestYourResourceService(TestCase):
         wishlist_id, item_id = self._create_item_for_deletion()
         original = Item.find(item_id).serialize()
         paths = [
-            f"/wishlists/{wishlist_id}/items/{item_id + 1}",
-            f"/wishlists/{wishlist_id + 1}/items/{item_id}",
+            f"/api/wishlists/{wishlist_id}/items/{item_id + 1}",
+            f"/api/wishlists/{wishlist_id + 1}/items/{item_id}",
         ]
         for path in paths:
             with self.subTest(path=path):
@@ -325,7 +341,7 @@ class TestYourResourceService(TestCase):
         wishlist_id, item_id = self._create_item_for_deletion()
         for attempt in range(2):
             with self.subTest(attempt=attempt):
-                response = self.client.delete(f"/wishlists/{wishlist_id}/items/{item_id}")
+                response = self.client.delete(f"/api/wishlists/{wishlist_id}/items/{item_id}")
                 self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
                 self.assertEqual(response.data, b"")
 
@@ -343,7 +359,7 @@ class TestYourResourceService(TestCase):
         other_original = Item.find(other_item_id).serialize()
 
         # Combine one parent's ID with the other parent's item ID; neither item should be deleted.
-        response = self.client.delete(f"/wishlists/{wishlist_id}/items/{other_item_id}")
+        response = self.client.delete(f"/api/wishlists/{wishlist_id}/items/{other_item_id}")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, b"")
 
@@ -376,7 +392,7 @@ class TestYourResourceService(TestCase):
         # Supply editable fields; the URL identifies the existing item and its parent.
         payload = {"product_id": 1002, "quantity": 2, "note": "Updated note"}
         response = self.client.put(
-            f"/wishlists/{wishlist_id}/items/{item_id}", json=payload
+            f"/api/wishlists/{wishlist_id}/items/{item_id}", json=payload
         )
 
         # Return the updated item itself, including its unchanged identity and parent.
@@ -417,11 +433,11 @@ class TestYourResourceService(TestCase):
         original = Item.find(item_id).serialize()
         cases = [
             (
-                f"/wishlists/{wishlist_id + 1}/items/{item_id}",
+                f"/api/wishlists/{wishlist_id + 1}/items/{item_id}",
                 f"Wishlist with id '{wishlist_id + 1}' was not found",
             ),
             (
-                f"/wishlists/{wishlist_id}/items/{item_id + 1}",
+                f"/api/wishlists/{wishlist_id}/items/{item_id + 1}",
                 f"Item with id '{item_id + 1}' was not found in Wishlist '{wishlist_id}'",
             ),
         ]
@@ -451,7 +467,7 @@ class TestYourResourceService(TestCase):
 
         # An existing item is still not found under the wrong parent URL.
         response = self.client.put(
-            f"/wishlists/{wishlist_id}/items/{other_item_id}",
+            f"/api/wishlists/{wishlist_id}/items/{other_item_id}",
             json={"product_id": 1002, "quantity": 2},
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -498,7 +514,7 @@ class TestYourResourceService(TestCase):
                 wishlist_id, item_id = self._create_item_for_update(f"Invalid input case {case_number}")
                 original = Item.find(item_id).serialize()
                 response = self.client.put(
-                    f"/wishlists/{wishlist_id}/items/{item_id}", json=payload
+                    f"/api/wishlists/{wishlist_id}/items/{item_id}", json=payload
                 )
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertTrue(response.is_json)
@@ -518,7 +534,7 @@ class TestYourResourceService(TestCase):
         wishlist_id = wishlist.id
 
         payload = {"name": "Holiday", "customer_id": 1001, "note": "new"}
-        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual(data["id"], wishlist_id)
@@ -532,7 +548,7 @@ class TestYourResourceService(TestCase):
     def test_update_wishlist_not_found(self):
         """It should return Not Found when updating a missing Wishlist"""
         payload = {"name": "Holiday", "customer_id": 1001}
-        response = self.client.put("/wishlists/0", json=payload)
+        response = self.client.put("/api/wishlists/0", json=payload)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         self.assertIsNotNone(data)
@@ -550,7 +566,7 @@ class TestYourResourceService(TestCase):
         ]
         for payload in invalid_payloads:
             with self.subTest(payload=payload):
-                response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+                response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 data = response.get_json()
                 self.assertIsNotNone(data)
@@ -567,7 +583,7 @@ class TestYourResourceService(TestCase):
 
         for payload in INVALID_TYPE_PAYLOADS:
             with self.subTest(payload=payload):
-                response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+                response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 data = response.get_json()
                 self.assertIsNotNone(data)
@@ -586,7 +602,7 @@ class TestYourResourceService(TestCase):
         wishlist_id = wishlist.id
 
         payload = {"name": "Holiday", "customer_id": 1002, "note": "new"}
-        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response.get_json()
         self.assertIsNotNone(data)
@@ -603,7 +619,7 @@ class TestYourResourceService(TestCase):
         wishlist = WishListFactory(name="Birthday", customer_id=1001)
         wishlist.create()
         response = self.client.put(
-            f"/wishlists/{wishlist.id}",
+            f"/api/wishlists/{wishlist.id}",
             data="name=Holiday&customer_id=1001",
             content_type="text/plain",
         )
@@ -620,7 +636,7 @@ class TestYourResourceService(TestCase):
         wishlist_id = wishlist.id
 
         payload = {"name": "Birthday", "customer_id": 1001}
-        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         data = response.get_json()
         self.assertIsNotNone(data)
@@ -636,7 +652,7 @@ class TestYourResourceService(TestCase):
         wishlist_id = wishlist.id
 
         payload = {"name": "Birthday", "customer_id": 1001, "note": "new"}
-        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual(data["name"], "Birthday")
@@ -651,7 +667,7 @@ class TestYourResourceService(TestCase):
 
         payload = wishlist.serialize()
         payload["name"] = "Holiday"
-        response = self.client.put(f"/wishlists/{wishlist_id}", json=payload)
+        response = self.client.put(f"/api/wishlists/{wishlist_id}", json=payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual(data["name"], "Holiday")
@@ -662,7 +678,7 @@ class TestYourResourceService(TestCase):
         """It should Read a single Wishlist"""
         wishlist = WishListFactory()
         wishlist.create()
-        response = self.client.get(f"/wishlists/{wishlist.id}")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -678,7 +694,7 @@ class TestYourResourceService(TestCase):
         wishlist.create()
         item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
         item.create()
-        response = self.client.get(f"/wishlists/{wishlist.id}")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual(len(data["items"]), 1)
@@ -696,7 +712,7 @@ class TestYourResourceService(TestCase):
         """It should add a product to an existing Wishlist"""
         wishlist = self._create_wishlist()
         payload = {"product_id": 2001, "quantity": 2, "note": "Size M"}
-        response = self.client.post(f"/wishlists/{wishlist.id}/items", json=payload)
+        response = self.client.post(f"/api/wishlists/{wishlist.id}/items", json=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -715,7 +731,7 @@ class TestYourResourceService(TestCase):
         """It should default quantity to 1 when it is not given"""
         wishlist = self._create_wishlist()
         response = self.client.post(
-            f"/wishlists/{wishlist.id}/items", json={"product_id": 2001}
+            f"/api/wishlists/{wishlist.id}/items", json={"product_id": 2001}
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.get_json()
@@ -726,7 +742,7 @@ class TestYourResourceService(TestCase):
         """It should use the Wishlist id from the URL, not the body"""
         wishlist = self._create_wishlist()
         payload = {"product_id": 2001, "quantity": 1, "wishlist_id": 999999}
-        response = self.client.post(f"/wishlists/{wishlist.id}/items", json=payload)
+        response = self.client.post(f"/api/wishlists/{wishlist.id}/items", json=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.get_json()["wishlist_id"], wishlist.id)
 
@@ -735,14 +751,14 @@ class TestYourResourceService(TestCase):
         wishlist = self._create_wishlist()
         for product_id in (2001, 2002, 2003):
             response = self.client.post(
-                f"/wishlists/{wishlist.id}/items", json={"product_id": product_id}
+                f"/api/wishlists/{wishlist.id}/items", json={"product_id": product_id}
             )
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(WishList.find(wishlist.id).items), 3)
 
     def test_add_item_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
-        response = self.client.post("/wishlists/0/items", json={"product_id": 2001})
+        response = self.client.post("/api/wishlists/0/items", json={"product_id": 2001})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -752,7 +768,7 @@ class TestYourResourceService(TestCase):
 
     def test_get_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
-        response = self.client.get("/wishlists/0")
+        response = self.client.get("/api/wishlists/0")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -778,7 +794,7 @@ class TestYourResourceService(TestCase):
         for payload in invalid_payloads:
             with self.subTest(payload=payload):
                 response = self.client.post(
-                    f"/wishlists/{wishlist.id}/items", json=payload
+                    f"/api/wishlists/{wishlist.id}/items", json=payload
                 )
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(len(Item.all()), 0)
@@ -835,7 +851,7 @@ class TestYourResourceService(TestCase):
         for body in ["null", "[]", '"text"']:
             with self.subTest(body=body):
                 response = self.client.post(
-                    f"/wishlists/{wishlist.id}/items",
+                    f"/api/wishlists/{wishlist.id}/items",
                     data=body,
                     content_type="application/json",
                 )
@@ -847,7 +863,7 @@ class TestYourResourceService(TestCase):
         """It should return 415 when the request is not JSON"""
         wishlist = self._create_wishlist()
         response = self.client.post(
-            f"/wishlists/{wishlist.id}/items",
+            f"/api/wishlists/{wishlist.id}/items",
             data="product_id=2001",
             content_type="text/plain",
         )
@@ -867,7 +883,7 @@ class TestYourResourceService(TestCase):
         wishlist.create()
         expected_ids = sorted(item.id for item in wishlist.items)
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual([item["id"] for item in data], expected_ids)
@@ -887,7 +903,7 @@ class TestYourResourceService(TestCase):
         first_item.note = "updated note"
         first_item.update()
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["id"] for item in response.get_json()], expected_ids)
 
@@ -900,7 +916,7 @@ class TestYourResourceService(TestCase):
         other.items.append(ItemFactory(wishlist=other))
         other.create()
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         self.assertEqual(len(data), 1)
@@ -911,13 +927,13 @@ class TestYourResourceService(TestCase):
         wishlist = WishListFactory()
         wishlist.create()
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.get_json(), [])
 
     def test_list_wishlist_items_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
-        response = self.client.get("/wishlists/0/items")
+        response = self.client.get("/api/wishlists/0/items")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -930,7 +946,7 @@ class TestYourResourceService(TestCase):
         item = ItemFactory(wishlist=wishlist, wishlist_id=wishlist.id)
         item.create()
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items/{item.id}")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items/{item.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -942,7 +958,7 @@ class TestYourResourceService(TestCase):
 
     def test_get_wishlist_item_wishlist_not_found(self):
         """It should return 404 Not Found when the Wishlist does not exist"""
-        response = self.client.get("/wishlists/0/items/1")
+        response = self.client.get("/api/wishlists/0/items/1")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -953,7 +969,7 @@ class TestYourResourceService(TestCase):
     def test_get_wishlist_item_not_found(self):
         """It should return 404 Not Found when the Item does not exist"""
         wishlist = self._create_wishlist()
-        response = self.client.get(f"/wishlists/{wishlist.id}/items/0")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items/0")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.content_type, "application/json")
         data = response.get_json()
@@ -968,7 +984,7 @@ class TestYourResourceService(TestCase):
         item = ItemFactory(wishlist=other_wishlist, wishlist_id=other_wishlist.id)
         item.create()
 
-        response = self.client.get(f"/wishlists/{wishlist.id}/items/{item.id}")
+        response = self.client.get(f"/api/wishlists/{wishlist.id}/items/{item.id}")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         self.assertEqual(data["error"], "Not Found")

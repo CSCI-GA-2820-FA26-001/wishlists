@@ -18,12 +18,53 @@ Module: error_handlers
 """
 from flask import jsonify
 from flask import current_app as app  # Import Flask application
+from werkzeug.exceptions import HTTPException
 from service.models import DataValidationError
+from service.routes import api
 from . import status
+
+# Error names used in every JSON error response
+ERROR_NAMES = {
+    status.HTTP_400_BAD_REQUEST: "Bad Request",
+    status.HTTP_404_NOT_FOUND: "Not Found",
+    status.HTTP_405_METHOD_NOT_ALLOWED: "Method not Allowed",
+    status.HTTP_409_CONFLICT: "Conflict",
+    status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: "Unsupported media type",
+}
 
 
 ######################################################################
-# Error Handlers
+# Flask-RESTX Error Handlers (for the /api routes)
+#
+# Flask-RESTX handles errors raised inside its Resources itself, so these
+# return the same JSON body as the Flask handlers below, as a dict.
+######################################################################
+@api.errorhandler(DataValidationError)
+def api_validation_error(error):
+    """Handles bad data in /api requests with 400_BAD_REQUEST"""
+    message = str(error)
+    app.logger.warning(message)
+    return {
+        "status": status.HTTP_400_BAD_REQUEST,
+        "error": "Bad Request",
+        "message": message,
+    }, status.HTTP_400_BAD_REQUEST
+
+
+@api.errorhandler(HTTPException)
+def api_http_error(error):
+    """Handles HTTP errors (404, 405, 409, 415, ...) raised in /api requests"""
+    message = str(error)
+    app.logger.warning(message)
+    return {
+        "status": error.code,
+        "error": ERROR_NAMES.get(error.code, error.name),
+        "message": message,
+    }, error.code
+
+
+######################################################################
+# Flask Error Handlers (for the non-API routes)
 ######################################################################
 @app.errorhandler(DataValidationError)
 def request_validation_error(error):
