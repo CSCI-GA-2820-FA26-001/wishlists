@@ -7,7 +7,7 @@ from service.common import status
 from service.models import db, Item, WishList
 from tests.factories import WishListFactory, ItemFactory
 
-BASE_URL = "/wishlists"
+BASE_URL = "/api/wishlists"
 
 
 class TestWishListQueryService(TestCase):

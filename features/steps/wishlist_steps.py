@@ -11,7 +11,7 @@ REQUEST_TIMEOUT = 30
 @given("the following wishlists")
 def load_wishlists(context):
     """Delete all Wishlists and load new ones through the public REST API, like the lab"""
-    url = f"{context.base_url}/wishlists"
+    url = f"{context.base_url}/api/wishlists"
 
     # Get a list of all the wishlists and delete them one by one
     response = requests.get(url, timeout=REQUEST_TIMEOUT)
@@ -30,7 +30,7 @@ def load_wishlists(context):
 @given('the "{name}" wishlist for customer {customer_id:d} has the following items')
 def load_wishlist_items(context, name, customer_id):
     """Add the table's items to an existing wishlist through the REST API."""
-    url = f"{context.base_url}/wishlists"
+    url = f"{context.base_url}/api/wishlists"
     response = requests.get(url, params={"customer_id": customer_id}, timeout=REQUEST_TIMEOUT)
     assert response.status_code == HTTPStatus.OK, f"Could not list wishlists: {response.status_code}"
     matches = [wishlist for wishlist in response.json() if wishlist["name"] == name]
