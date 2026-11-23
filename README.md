@@ -386,9 +386,35 @@ table's rows through the REST API, so every scenario starts from the same data.
 Run Behave against a test or development instance, never a database with real data. Perform scenario actions and assertions through Selenium and
 the Admin UI. The Tekton BDD task will run the feature scenarios after deployment.
 
+## CD Pipeline (Tekton)
+
+The CD pipeline runs on OpenShift and lives in `.tekton/`. It starts by cloning the repo into a shared workspace; each later task (lint, test, build, deploy, BDD) reads the source from there.
+
+Log in to your OpenShift cluster with `oc login`, then create the workspace and the pipeline:
+
+```bash
+oc apply -f .tekton/workspace.yaml
+oc apply -f .tekton/pipeline.yaml
+```
+
+Start a run for `master` and follow its logs:
+
+```bash
+tkn pipeline start cd-pipeline \
+  -p GIT_REPO=https://github.com/CSCI-GA-2820-FA26-001/wishlists.git \
+  -w name=pipeline-workspace,claimName=pipeline-pvc \
+  --showlog
+```
+
+Add `-p GIT_REF=<branch>` to clone a different branch. The `clone` task uses the `git-clone` Task that OpenShift Pipelines installs in the `openshift-pipelines` namespace.
+
 ## Project Structure
 
 ```text
+.tekton/                   - Tekton CD pipeline for OpenShift
+├── pipeline.yaml          - cd-pipeline and its tasks
+└── workspace.yaml         - shared PVC workspace for the pipeline
+
 Dockerfile                 - production image for the service
 k8s/                       - Kubernetes manifests applied by make deploy
 ├── deployment.yaml        - service Deployment with /health probes
