@@ -186,7 +186,9 @@ class WishlistResource(Resource):
         wishlist = find_wishlist_or_404(wishlist_id)
         # Validate on a detached copy (with the current owner) so a rejected
         # request leaves the stored record untouched
-        updated = WishList(customer_id=wishlist.customer_id).deserialize(request.get_json())
+        updated = WishList()
+        updated.customer_id = wishlist.customer_id
+        updated.deserialize(request.get_json())
         existing = WishList.find_by_customer_and_name(updated.customer_id, updated.name)
         if existing and existing.id != wishlist_id:
             abort(

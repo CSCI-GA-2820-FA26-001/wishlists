@@ -54,7 +54,8 @@ class TestWishListModel(TestCase):
         """It should create a wishlist and assert its attributes"""
         fake_wishlist = WishListFactory()
 
-        wishlist = WishList(
+        # SQLAlchemy models take column values as keyword arguments
+        wishlist = WishList(  # pylint: disable=unexpected-keyword-arg
             id=fake_wishlist.id,
             name=fake_wishlist.name,
             customer_id=fake_wishlist.customer_id,
@@ -210,7 +211,8 @@ class TestWishListModel(TestCase):
 
     def test_deserialize_cannot_change_customer_id(self):
         """It should not Deserialize a different customer_id into an owned WishList"""
-        wishlist = WishList(customer_id=1001)
+        wishlist = WishList()
+        wishlist.customer_id = 1001
         self.assertRaises(
             DataValidationError,
             wishlist.deserialize,
