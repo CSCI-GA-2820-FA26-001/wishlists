@@ -339,6 +339,12 @@ Remove the cluster with `make cluster-rm`. If `make push` fails with `no such ho
 sudo bash -c "echo '127.0.0.1    cluster-registry' >> /etc/hosts"
 ```
 
+## Deploying to OpenShift
+
+See [openshift/README.md](openshift/README.md) for Developer Sandbox deployment,
+the persistent PostgreSQL database, Secret, manual image build, HTTPS Route,
+and verification steps.
+
 ## Browser test environment (issue #50)
 
 The professor's [project template](https://github.com/nyu-devops/project-template)

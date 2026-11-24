@@ -1,0 +1,110 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: wishlists-deployment
+parameters:
+  - name: NAMESPACE
+    description: Developer Sandbox project containing the image and database.
+    required: true
+  - name: IMAGE_TAG
+    description: Commit SHA used by the completed manual image build.
+    required: true
+objects:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: wishlists
+      labels:
+        app: wishlists
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: wishlists
+      template:
+        metadata:
+          labels:
+            app: wishlists
+          annotations:
+            wishlists/source-revision: ${IMAGE_TAG}
+        spec:
+          initContainers:
+            - name: wait-for-postgres
+              image: docker.io/library/postgres:16
+              command:
+                - sh
+                - -c
+                - until pg_isready -h wishlists-postgres -p 5432; do echo waiting for postgres; sleep 2; done
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          containers:
+            - name: wishlists
+              image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/wishlists:${IMAGE_TAG}
+              imagePullPolicy: Always
+              ports:
+                - name: http
+                  containerPort: 8080
+              env:
+                - name: DATABASE_URI
+                  valueFrom:
+                    secretKeyRef:
+                      name: wishlists-postgres-secret
+                      key: DATABASE_URI
+              startupProbe:
+                httpGet:
+                  path: /health
+                  port: http
+                periodSeconds: 5
+                failureThreshold: 60
+              readinessProbe:
+                httpGet:
+                  path: /health
+                  port: http
+                periodSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: http
+                periodSeconds: 20
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: wishlists
+      labels:
+        app: wishlists
+    spec:
+      type: ClusterIP
+      selector:
+        app: wishlists
+      ports:
+        - name: http
+          port: 8080
+          targetPort: http
+          protocol: TCP
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: wishlists
+      labels:
+        app: wishlists
+    spec:
+      to:
+        kind: Service
+        name: wishlists
+      port:
+        targetPort: http
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
