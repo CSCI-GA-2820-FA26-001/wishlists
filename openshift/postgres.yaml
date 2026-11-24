@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wishlists-postgres
+  labels:
+    app: wishlists-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: wishlists-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wishlists-postgres
+  labels:
+    app: wishlists-postgres
+spec:
+  serviceName: wishlists-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wishlists-postgres
+  template:
+    metadata:
+      labels:
+        app: wishlists-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:16
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: wishlists
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wishlists-postgres-secret
+                  key: POSTGRES_PASSWORD
+            # Let the assigned OpenShift UID own the database subdirectory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, postgres, -d, wishlists]
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, postgres, -d, wishlists]
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi
